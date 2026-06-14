@@ -13,7 +13,7 @@
 
 import { app, BrowserWindow, ipcMain, dialog, shell } from "electron";
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { getKey, setKey } from "./keychain.js";
@@ -22,6 +22,19 @@ import { buildArgs } from "./buildArgs.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", ".."); // jap_video_sub/ repo root
 const DEV_URL = process.env.JVS_DEV_URL;
+
+/** True if the repo .env already holds a usable OPENAI_API_KEY (dev fallback so
+ * personal use doesn't get nagged for a key it already has). */
+function envFileHasKey() {
+  try {
+    const txt = fs.readFileSync(path.join(REPO_ROOT, ".env"), "utf8");
+    const m = txt.match(/^\s*OPENAI_API_KEY\s*=\s*(.+?)\s*$/m);
+    const v = m && m[1].trim().replace(/^["']|["']$/g, "");
+    return !!v && v.startsWith("sk-") && !/your-key|\.\.\./.test(v);
+  } catch {
+    return false;
+  }
+}
 
 const jobs = new Map(); // jobId -> child process
 
@@ -94,28 +107,29 @@ async function startRun(event, jobId, options) {
 }
 
 function registerIpc() {
-  ipcMain.handle("jvs:start-run", (event, options) => {
-    const jobId = randomUUID();
+  // Renderer owns the job id, so these are fire-and-forget sends; listeners can
+  // attach synchronously right after startRun returns.
+  ipcMain.on("jvs:start-run", (event, { jobId, options }) => {
     startRun(event, jobId, options); // async; events arrive over IPC
-    return jobId;
   });
 
-  // Onboarding only needs to know whether a key exists — the secret itself never
-  // crosses back to the renderer.
+  ipcMain.on("jvs:cancel-run", (_event, { jobId }) => {
+    const child = jobs.get(jobId);
+    if (child) child.kill("SIGTERM");
+  });
+
+  // Onboarding only needs to know whether a key is available — the secret itself
+  // never crosses back to the renderer. Keychain first, then the dev .env.
   ipcMain.handle("jvs:has-key", async () => {
     try {
-      return !!(await getKey());
+      if (await getKey()) return true;
     } catch {
-      return false;
+      /* fall through to .env check */
     }
+    return envFileHasKey();
   });
   ipcMain.handle("jvs:set-key", async (_event, key) => {
     await setKey(String(key).trim());
-  });
-
-  ipcMain.handle("jvs:cancel-run", (_event, jobId) => {
-    const child = jobs.get(jobId);
-    if (child) child.kill("SIGTERM");
   });
 
   ipcMain.handle("jvs:pick-file", async () => {
@@ -144,7 +158,7 @@ function createWindow() {
     titleBarStyle: "hiddenInset",
     backgroundColor: "#0f1115",
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
     },
