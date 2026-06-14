@@ -2,7 +2,20 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+# Hide Hugging Face's "Fetching N files" cache-check bars, which print on every
+# run (even when fully cached) and look like a re-download. Must be set before
+# huggingface_hub is imported (mlx_whisper pulls it in).
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+
+
+def _quiet_hf_logging() -> None:
+    """Silence the noisy 'unauthenticated requests to the HF Hub' warning."""
+    import logging
+
+    logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 
 from .srt import Segment
 
@@ -16,6 +29,68 @@ MODELS = {
 }
 
 
+def clear_cache() -> None:
+    """Release MLX's GPU buffer cache between chunks to keep memory bounded."""
+    try:
+        import mlx.core as mx
+
+        mx.clear_cache()
+    except Exception:
+        pass
+
+
+def set_cache_limit(gb: float) -> None:
+    """Cap MLX's reuse pool of freed buffers (gb<=0 leaves it unlimited).
+
+    This only limits *idle/freed* memory MLX hoards for fast reallocation; it
+    never touches active model weights or working tensors, so results are
+    identical. It just stops the cache from ballooning over a long run.
+    """
+    if gb <= 0:
+        return
+    try:
+        import mlx.core as mx
+
+        mx.set_cache_limit(int(gb * 1024**3))
+    except Exception:
+        pass
+
+
+def reset_peak_memory() -> None:
+    try:
+        import mlx.core as mx
+
+        mx.reset_peak_memory()
+    except Exception:
+        pass
+
+
+def peak_memory_gb() -> float:
+    """Peak active memory (GB) since the last reset; 0.0 if unavailable."""
+    try:
+        import mlx.core as mx
+
+        return mx.get_peak_memory() / 1024**3
+    except Exception:
+        return 0.0
+
+
+def preload(model: str = "large-v3") -> None:
+    """Load the model weights into memory ahead of decoding.
+
+    mlx-whisper otherwise loads lazily inside transcribe(), producing a silent
+    10-30s gap before its progress bar appears. Priming the shared ModelHolder
+    here lets the CLI show a spinner for the load, after which transcribe()
+    reuses the cached model and the decode progress bar starts immediately.
+    """
+    import mlx.core as mx
+    from mlx_whisper.transcribe import ModelHolder
+
+    _quiet_hf_logging()
+    repo = MODELS.get(model, model)
+    ModelHolder.get_model(repo, mx.float16)  # matches transcribe()'s default dtype
+
+
 def transcribe(
     audio_path: Path,
     model: str = "large-v3",
@@ -23,6 +98,7 @@ def transcribe(
     verbose: bool | None = None,
     refine: bool = True,
     split_gap: float = 0.8,
+    drop_nonspeech: bool = True,
 ) -> list[Segment]:
     """Transcribe Japanese audio to time-stamped Japanese segments.
 
@@ -35,9 +111,15 @@ def transcribe(
     refine=True snaps each cue to its actual spoken word boundaries and splits
     a cue wherever speech pauses for more than `split_gap` seconds, which fixes
     most off-by-a-beat sync and over-long-block issues.
+
+    condition_on_previous_text is disabled to stop the self-reinforcing
+    hallucination loops (climbing numbers, repeated names) that Whisper falls
+    into on non-speech audio. Output is then run through clean.clean_segments.
     """
+    from . import clean  # local import to avoid a cycle at module load
     import mlx_whisper  # imported lazily so `--help` etc. stay fast
 
+    _quiet_hf_logging()
     repo = MODELS.get(model, model)  # allow passing a raw repo id too
     result = mlx_whisper.transcribe(
         str(audio_path),
@@ -46,13 +128,14 @@ def transcribe(
         task="transcribe",
         word_timestamps=True,
         initial_prompt=initial_prompt,
-        condition_on_previous_text=True,
+        condition_on_previous_text=False,  # break hallucination feedback loops
         verbose=verbose,
     )
 
     raw = result.get("segments", [])
     segments = _refine(raw, split_gap) if refine else _plain(raw)
-    # renumber 1..N after any splitting/merging
+    segments = clean.clean_segments(segments, drop_nonspeech=drop_nonspeech)
+    # renumber 1..N after any splitting/merging/cleanup
     for i, seg in enumerate(segments, start=1):
         seg.index = i
     return segments
