@@ -1,0 +1,38 @@
+{
+  "name": "jap-video-sub-app",
+  "version": "0.1.0",
+  "description": "Desktop wrapper for jap-video-sub.",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron": "electron .",
+    "dev:electron": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env JVS_DEV_URL=http://localhost:5173 electron .\"",
+    "typecheck": "tsc --noEmit",
+    "test:node": "node tests/buildArgs.test.mjs && node tests/keychain.test.mjs && node tests/bridge.test.mjs",
+    "test:e2e": "playwright test",
+    "test": "npm run typecheck && npm run test:node && npm run test:e2e"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/space-grotesk": "^5.2.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.2",
+    "concurrently": "^9.0.1",
+    "cross-env": "^7.0.3",
+    "electron": "^33.0.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.8",
+    "wait-on": "^8.0.1"
+  }
+}

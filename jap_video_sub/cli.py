@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 
 from . import audio as audio_mod
+from . import events as events_mod
 from . import srt as srt_mod
 from . import transcribe as transcribe_mod
 from . import translate as translate_mod
@@ -27,6 +28,31 @@ app = typer.Typer(
     help="Turn a Japanese-audio video into time-synced English subtitles.",
 )
 console = Console()
+
+
+def _enable_json_mode() -> None:
+    """Switch the CLI to machine-readable mode: silence the human-facing rich
+    output and turn on the JSON event emitter so stdout carries only events."""
+    events_mod.configure(enabled=True)
+    console.quiet = True  # suppress all rich prints; events become the output
+
+
+def _emit_error(stage: str, message: str, fatal: bool = False) -> None:
+    events_mod.emitter.emit("error", stage=stage, message=message, fatal=fatal)
+
+
+def _json_mode() -> bool:
+    return events_mod.emitter.enabled
+
+
+def _overall(done: int, total: int, chunk_durs: list[float]) -> tuple[int, float]:
+    """Overall percent complete and ETA seconds, from finished-chunk timings."""
+    pct = int(done / total * 100) if total else 0
+    eta = 0.0
+    if chunk_durs and total > done:
+        avg = sum(chunk_durs) / len(chunk_durs)
+        eta = round(avg * (total - done), 1)
+    return pct, eta
 
 
 def _workdir(video: Path) -> Path:
@@ -201,13 +227,28 @@ def _run_pipeline(
     per-stage progress, per-chunk timing, and overall progress/ETA."""
     work = _workdir(video)
     console.print(f"[bold]jap-video-sub[/] · {video.name}")
+    events_mod.emitter.emit(
+        "run_start",
+        video=str(video),
+        output=str(out),
+        whisper_model=whisper_model,
+        openai_model=openai_model or translate_mod.DEFAULT_MODEL,
+        notes=notes,
+        chunk_minutes=(chunk_seconds / 60 if chunk_seconds != float("inf") else 0),
+    )
 
     if out.exists() and not force:
         _done(f"already done (cached) → {out}")
         console.print("  [dim]use --force to regenerate[/]")
+        existing = srt_mod.read(out)
+        events_mod.emitter.emit(
+            "run_done", output=str(out), ja_lines=len(existing),
+            en_lines=len(existing), seconds=0.0, cached=True,
+        )
         return
 
     if not os.environ.get("OPENAI_API_KEY"):
+        _emit_error("apikey", "OPENAI_API_KEY not set.", fatal=True)
         console.print(
             "[red]OPENAI_API_KEY not set.[/] Add it to "
             f"{Path(__file__).resolve().parents[1] / '.env'} and re-run."
@@ -216,10 +257,24 @@ def _run_pipeline(
 
     wav = _get_audio(video, work, force)
     duration = audio_mod.probe_duration(wav)
+    events_mod.emitter.emit("audio_ready", duration=duration)
+    events_mod.emitter.emit(
+        "estimate",
+        est_usd=round(duration / 3600.0 * 0.19, 4),
+        est_seconds=round(duration * 0.6, 1),
+    )
     prompt = notes or None
-    vflag = True if verbose else None
+    vflag = False if _json_mode() else (True if verbose else None)
     plan, chunks_dir = _plan_chunks(wav, work, force, duration, chunk_seconds)
     total = len(plan)
+    events_mod.emitter.emit(
+        "plan",
+        total=total,
+        chunks=[
+            {"index": i, "start": round(s, 2), "end": round(e, 2)}
+            for i, (s, e) in enumerate(plan, start=1)
+        ],
+    )
     transcribe_mod.set_cache_limit(cache_limit_gb)
 
     all_ja: list[srt_mod.Segment] = []
@@ -233,15 +288,26 @@ def _run_pipeline(
         chunk_ja = chunks_dir / f"chunk_{i:03d}.ja.srt"
         chunk_en = chunks_dir / f"chunk_{i:03d}.en.srt"
         _chunk_rule(i, total, start, end, chunk_durs)
+        pct, eta = _overall(i - 1, total, chunk_durs)
+        events_mod.emitter.emit(
+            "chunk_start", index=i, total=total, start=round(start, 2),
+            end=round(end, 2), overall_pct=pct, eta_seconds=eta,
+        )
 
         # Fully done already (transcribed + translated): reuse and skip.
         if chunk_en.exists() and not force:
             en_local = srt_mod.read(chunk_en)
             ja_local = srt_mod.read(chunk_ja) if chunk_ja.exists() else en_local
             _done(f"cached (transcription + translation) — {len(en_local)} lines")
+            events_mod.emitter.emit("cached", index=i, scope="both", lines=len(en_local))
             all_ja.extend(ja_local)
             all_en.extend(en_local)
             prior_ctx = [s.text for s in en_local][-6:]
+            pct, eta = _overall(i, total, chunk_durs)
+            events_mod.emitter.emit(
+                "chunk_done", index=i, total=total, seconds=0.0,
+                overall_pct=pct, eta_seconds=eta,
+            )
             continue
 
         t_chunk = time.perf_counter()
@@ -250,8 +316,12 @@ def _run_pipeline(
         if chunk_ja.exists() and not force:
             ja_local = srt_mod.read(chunk_ja)
             _done(f"[1/2] transcript cached — {len(ja_local)} lines")
+            events_mod.emitter.emit(
+                "cached", index=i, scope="transcribe", lines=len(ja_local)
+            )
         else:
             console.print("  [bold cyan]· [1/2] Transcribing…[/]")
+            events_mod.emitter.emit("stage_start", index=i, stage="transcribe")
             if not model_loaded:
                 _load_model(whisper_model)
                 model_loaded = True
@@ -275,14 +345,22 @@ def _run_pipeline(
                 f"[1/2] transcribed {len(ja_local)} lines · "
                 f"{_fmt_dur(time.perf_counter() - t0)} · peak {peak:.1f} GB"
             )
+            events_mod.emitter.emit(
+                "transcribe_done", index=i, lines=len(ja_local),
+                seconds=round(time.perf_counter() - t0, 2), peak_gb=round(peak, 2),
+            )
 
         # ---- Stage 2: translate ----
         t1 = time.perf_counter()
         console.print("  [bold cyan]· [2/2] Translating…[/]")
+        events_mod.emitter.emit("stage_start", index=i, stage="translate")
         with console.status("[cyan][2/2] translating…", spinner="dots") as status:
 
-            def progress(done: int, tot: int) -> None:
+            def progress(done: int, tot: int, _i: int = i) -> None:
                 status.update(f"[cyan][2/2] translating… {done}/{tot} lines")
+                events_mod.emitter.emit(
+                    "translate_progress", index=_i, done=done, total=tot
+                )
 
             en_local = translate_mod.translate_segments(
                 ja_local,
@@ -294,6 +372,10 @@ def _run_pipeline(
         srt_mod.write(chunk_en, en_local)
         prior_ctx = [s.text for s in en_local][-6:]
         _done(f"[2/2] translated {len(en_local)} lines · {_fmt_dur(time.perf_counter() - t1)}")
+        events_mod.emitter.emit(
+            "translate_done", index=i, lines=len(en_local),
+            seconds=round(time.perf_counter() - t1, 2),
+        )
 
         all_ja.extend(ja_local)
         all_en.extend(en_local)
@@ -301,8 +383,14 @@ def _run_pipeline(
         chunk_durs.append(dt)
         if total > 1:
             console.print(f"  [bold green]✓ chunk {i}/{total} done · {_fmt_dur(dt)}[/]")
+        pct, eta = _overall(i, total, chunk_durs)
+        events_mod.emitter.emit(
+            "chunk_done", index=i, total=total, seconds=round(dt, 2),
+            overall_pct=pct, eta_seconds=eta,
+        )
 
     if not all_en:
+        _emit_error("transcribe", "No speech detected — nothing to translate.", fatal=True)
         console.print("[red]No speech detected — nothing to translate.[/]")
         raise typer.Exit(1)
 
@@ -323,6 +411,10 @@ def _run_pipeline(
     console.print(
         f"\n[bold green]Done in {_fmt_dur(time.perf_counter() - t_start)}.[/] "
         f"→ [bold]{out}[/]"
+    )
+    events_mod.emitter.emit(
+        "run_done", output=str(out), ja_lines=len(all_ja), en_lines=len(all_en),
+        seconds=round(time.perf_counter() - t_start, 1),
     )
 
 
@@ -353,7 +445,7 @@ def _translate(
 
 @app.command()
 def run(
-    video: Path = typer.Argument(..., exists=True, dir_okay=False, help="Japanese-audio video/audio file."),
+    video: Path = typer.Argument(..., dir_okay=False, help="Japanese-audio video/audio file."),
     output: Path = typer.Option(None, "--output", "-o", help="Output .srt path (default: <video>.en.srt)."),
     whisper_model: str = typer.Option("large-v3", "--whisper-model", "-w", help="large-v3 | turbo | medium | small."),
     openai_model: str = typer.Option(None, "--openai-model", "-m", help="OpenAI model (default: gpt-4o or $JVS_OPENAI_MODEL)."),
@@ -365,8 +457,35 @@ def run(
     cache_limit_gb: float = typer.Option(2.0, "--cache-limit-gb", help="Cap MLX's reused GPU memory pool (GB) to ease memory pressure. 0 = unlimited."),
     keep_non_speech: bool = typer.Option(False, "--keep-non-speech", help="Keep moaning/non-speech sound cues instead of dropping them."),
     verbose: bool = typer.Option(False, "--verbose", help="Stream Whisper decoding output."),
+    json_events: bool = typer.Option(False, "--json", help="Emit machine-readable JSON-lines events on stdout (for GUIs/automation)."),
+    simulate: bool = typer.Option(False, "--simulate", help="Replay a realistic event stream without running the model or API (for UI dev/tests)."),
 ) -> None:
     """Full pipeline: video → English .srt (per-chunk transcribe + translate)."""
+    if json_events:
+        _enable_json_mode()
+
+    if simulate:
+        from . import simulate as simulate_mod
+
+        out = output or video.with_suffix(".en.srt")
+        simulate_mod.simulate_run(
+            events_mod.emitter,
+            video=str(video),
+            output=str(out),
+            whisper_model=whisper_model,
+            openai_model=openai_model or "gpt-4o",
+            notes=notes,
+            chunk_minutes=chunk_minutes,
+            speed=0.0 if not json_events else 1.0,
+        )
+        return
+
+    if not video.exists():
+        _emit_error("input", f"File not found: {video}", fatal=True)
+        if not json_events:
+            console.print(f"[red]File not found:[/] {video}")
+        raise typer.Exit(1)
+
     out = output or video.with_suffix(".en.srt")
     chunk_seconds = chunk_minutes * 60 if chunk_minutes > 0 else float("inf")
     _run_pipeline(

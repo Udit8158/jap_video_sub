@@ -6,3 +6,11 @@ __pycache__/
 
 # Intermediate work dirs created next to input videos
 *.jvs/
+
+# Desktop app build artifacts
+app/node_modules/
+app/dist/
+app/dist-electron/
+app/test-results/
+app/playwright-report/
+.DS_Store
