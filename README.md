@@ -1,320 +1,212 @@
 # jap-video-sub
 
-Turn a **Japanese-audio video** (lectures, talks, anime, long-form — even 2+ hours)
-into a **time-synced English `.srt` subtitle file**.
+Turn a **Japanese-audio video** into a **time-synced English `.srt`** — offline-first
+on Apple Silicon (the audio never leaves your Mac; only the small text transcript
+is sent to OpenAI to translate).
 
-It runs **offline-first on Apple Silicon**: the listening-and-transcribing part
-happens 100% on your Mac. Only the small text transcript (a few KB) is sent to
-OpenAI to be translated. **Your video file never leaves your machine.**
+This repo is a small monorepo with two pieces:
 
 ```
- video.mp4
-    │
-    │  ①  ffmpeg          rip a clean 16kHz audio track          (local, instant)
-    ▼
- audio.wav
-    │
-    │  ②  mlx-whisper     listen → Japanese subtitles + timing   (local, on-device)
-    │                     · long videos are split into chunks
-    │                     · timestamps snapped to each spoken word
-    │                     · Whisper's "hallucinations" cleaned up
-    ▼
- ja.srt
-    │
-    │  ③  OpenAI          translate Japanese → English           (only text leaves)
-    │                     · timestamps copied over untouched
-    ▼
- video.en.srt   ←  your finished English subtitles
+jap-video-sub/
+├── cli/        ← the engine: a Python CLI that does the actual work
+│               (ffmpeg → mlx-whisper transcribe → OpenAI translate)
+└── desktop/    ← a Mac desktop app (Electron + React) that drives the CLI
+                  and shows a live chunk-by-chunk timeline
+```
+
+The **CLI is the product**; the desktop app is just a friendly front-end that
+spawns it. They talk over exactly one seam: the CLI emits one JSON event per line
+(`jap-video-sub run --json`), and the app reads that stream. The contract lives in
+[`cli/jap_video_sub/events.py`](cli/jap_video_sub/events.py), mirrored in
+[`desktop/src/eventsource/types.ts`](desktop/src/eventsource/types.ts) — keep the
+two in sync.
+
+---
+
+## Prerequisites (one time)
+
+```bash
+brew install ffmpeg uv        # ffmpeg = audio extraction, uv = Python runner
+brew install node             # only if you want the desktop app
+```
+
+You also need an OpenAI API key for the translation step (see [API key](#api-key)).
+
+---
+
+## Install
+
+```bash
+make setup        # installs the CLI deps (cli/) and the desktop deps (desktop/)
+```
+
+Or install just one side:
+
+```bash
+cd cli     && uv sync         # CLI only
+cd desktop && npm install     # desktop only (needs the CLI set up too)
+```
+
+> **First CLI run** downloads the Whisper model (~3 GB for `large-v3`) into
+> `$HF_HOME` (default `~/.cache/huggingface`) and caches it forever. Don't point
+> `HF_HOME` at `/tmp` — it's wiped on reboot and forces a re-download.
+
+---
+
+## Everything you can do
+
+Every `make` target below is just a shortcut. The raw command it runs is shown so
+you can drop the wrapper and pass any flag directly.
+
+### Make targets at a glance
+
+| Command | What it does |
+|---|---|
+| `make help` | List all targets |
+| `make setup` | Install CLI + desktop dependencies |
+| `make sub VIDEO=path` | Full pipeline: video → English `.srt` |
+| `make transcribe VIDEO=path` | Transcribe only → Japanese `.srt` |
+| `make translate SRT=path` | Translate an existing Japanese `.srt` → English |
+| `make app` | Launch the desktop app (dev) |
+| `make test` | Run CLI + desktop tests |
+| `make test-cli` | CLI event-contract tests only |
+| `make test-desktop` | Desktop tests only (typecheck + node + e2e) |
+
+Pass extra CLI flags through the `ARGS=` variable, e.g.
+`make sub VIDEO=v.mp4 ARGS="-w turbo -n 'lecture on calculus'"`.
+
+### 1. Full pipeline — video → English subtitles
+
+```bash
+make sub VIDEO="video.mp4"
+# runs:  cd cli && uv run jap-video-sub run "video.mp4"
+```
+
+From the repo root without the wrapper, or from anywhere:
+
+```bash
+uv run --project cli jap-video-sub run "video.mp4"
+```
+
+From inside `cli/` (shortest):
+
+```bash
+cd cli && uv run jap-video-sub run "video.mp4"
+```
+
+Output lands at `<video>.en.srt` next to the input by default.
+
+### 2. Transcribe only (free, local — no OpenAI)
+
+Use this to inspect the Japanese transcript before paying to translate:
+
+```bash
+make transcribe VIDEO="video.mp4"
+# → video.jvs/ja.srt
+```
+
+### 3. Translate only (an existing Japanese `.srt`)
+
+```bash
+make translate SRT="video.jvs/ja.srt"
+# → video.jvs/ja.en.srt   (or use ARGS="-o out.srt")
+```
+
+### 4. Desktop app
+
+```bash
+make app
+# runs:  cd desktop && npm run dev:electron   (Vite + Electron + real CLI)
+```
+
+UI-only in a browser with fixture data (no Electron, no backend):
+
+```bash
+cd desktop && npm run dev      # then open http://localhost:5173/?mock
+```
+
+Browser URL flags: `?mock` (replay captured events), `?needkey` (force the
+API-key onboarding screen).
+
+---
+
+## CLI flag reference
+
+### `run` (full pipeline)
+
+| Flag | Default | Purpose |
+|---|---|---|
+| `-o, --output PATH` | `<video>.en.srt` | Where to write the English `.srt` |
+| `-w, --whisper-model` | `large-v3` | Speech model: `large-v3` \| `turbo` \| `medium` \| `small` |
+| `-m, --openai-model` | `gpt-4o` | Translation model (or `$JVS_OPENAI_MODEL`) |
+| `-n, --notes TEXT` | — | Context (topic, speaker names) — boosts accuracy a lot |
+| `-c, --chunk-minutes` | `10.0` | Split long audio into chunks for memory safety; `0` disables |
+| `-f, --force` | off | Redo every step, ignore cached files |
+| `--keep-japanese` | off | Also save the Japanese `.srt` beside the output |
+| `--keep-non-speech` | off | Keep moans/sighs instead of dropping them |
+| `--keep-chunks` | off | Keep per-chunk temp files for inspection |
+| `--cache-limit-gb` | `2.0` | Cap MLX's reused GPU memory pool; `0` = unlimited |
+| `--verbose` | off | Stream raw Whisper decoding output |
+| `--json` | off | Emit JSON-lines events on stdout (for GUIs/automation) |
+| `--simulate` | off | Replay a fake event stream — no model/API (UI dev/tests) |
+
+### `transcribe`
+
+Same as `run` minus the translation flags: `-w`, `-n`, `-f`, `-c`,
+`--keep-chunks`, `--cache-limit-gb`, `--keep-non-speech`, `--verbose`.
+
+### `translate`
+
+`-o, --output` · `-m, --openai-model` · `-n, --notes` · `-f, --force`.
+
+### Examples
+
+```bash
+# Fast draft with the turbo model and a context hint
+make sub VIDEO="lecture.mp4" ARGS="-w turbo -n 'calculus lecture, teacher Mr. Tanaka'"
+
+# Cheaper translation, keep the Japanese too
+make sub VIDEO="talk.mp4" ARGS="-m gpt-4o-mini --keep-japanese"
+
+# Don't chunk (short clip), force a clean re-run
+make sub VIDEO="clip.mp4" ARGS="-c 0 --force"
+
+# Two-step: check the Japanese first, then translate it
+make transcribe VIDEO="movie.mp4"
+make translate  SRT="movie.jvs/ja.srt" ARGS="-o movie.en.srt"
 ```
 
 ---
 
-## 1. Setup
+## API key
 
-You need three things: this repo, `ffmpeg`, and an OpenAI API key.
+The translation step calls OpenAI.
 
-### Step 1 — Install ffmpeg (one time)
+- **CLI:** copy `cli/.env.example` → `cli/.env` and set `OPENAI_API_KEY=sk-...`.
+- **Desktop app:** on first launch it asks for the key and stores it in the macOS
+  **Keychain** (service `jap-video-sub`); in dev it falls back to `cli/.env`.
 
-`ffmpeg` is the tool that reads your video and pulls the audio out of it.
-
-```bash
-brew install ffmpeg
-```
-
-(Don't have Homebrew? Install it from https://brew.sh first.)
-
-### Step 2 — Install the project
-
-This uses [`uv`](https://docs.astral.sh/uv/), a fast Python package manager.
-If you don't have it: `brew install uv`.
-
-```bash
-cd jap_video_sub
-uv sync            # creates a virtual env and installs everything
-```
-
-### Step 3 — Add your OpenAI API key
-
-The translation step calls OpenAI, so it needs a key. Get one at
-https://platform.openai.com/api-keys, then:
-
-```bash
-cp .env.example .env       # make your own .env file
-```
-
-Open `.env` in any editor and paste your key in:
-
-```
-OPENAI_API_KEY=sk-your-key-here
-```
-
-That's it. You're ready.
-
-> **First run note:** the speech model (`large-v3`, ~1.5 GB) downloads
-> automatically the first time and is cached forever after. So your *first*
-> run is a bit slower while it grabs the model — every run after is fast.
+Optional: `JVS_OPENAI_MODEL` sets the default translation model.
 
 ---
 
-## 2. How to use it
-
-### The simplest possible use
-
-Point it at a video and walk away:
+## Tests
 
 ```bash
-uv run jap-video-sub run video.mp4
+make test          # everything
+make test-cli      # cd cli && uv run --with pytest pytest   (event-contract)
+make test-desktop  # cd desktop && npm test  (typecheck + node + Playwright e2e)
 ```
-
-When it finishes you get **`video.en.srt`** sitting right next to your video.
-Drop that into VLC, YouTube, Premiere, or any player and the English subtitles
-appear in sync. Done.
-
-While it runs, it shows you live progress: which chunk it's on, how long each
-step took, memory used, and an overall % with an ETA.
-
-### Useful options (mix and match)
-
-Every option is optional. Here they are with what each one is *for*:
-
-```bash
-uv run jap-video-sub run video.mp4 \
-  -o subs.srt                    # where to save the result (default: <video>.en.srt)
-  -w turbo                       # which speech model to use (see below)
-  -m gpt-4o                      # which OpenAI model translates (see below)
-  -n "Lecture on calculus; teacher is Mr. Tanaka" \
-                                 # a hint about the video — boosts accuracy a LOT
-  -c 10                          # split videos into 10-minute chunks (0 = don't split)
-  --keep-japanese                # also save the Japanese .srt, not just English
-  --keep-non-speech              # keep moans/grunts/sighs instead of dropping them
-  --keep-chunks                  # keep the per-chunk temp files for inspection
-  --cache-limit-gb 2             # cap how much memory the model is allowed to hoard
-  --force                        # ignore all cached work and redo from scratch
-```
-
-**`-w` / `--whisper-model`** — picks the local speech-to-text model. Trade-off
-is accuracy vs. speed:
-
-| Model      | Accuracy        | Speed              | Use when…                    |
-|------------|-----------------|--------------------|------------------------------|
-| `large-v3` | best (default)  | ~real-time         | you want the cleanest result |
-| `turbo`    | very good       | several × faster   | you want speed, minor errors ok |
-| `medium`   | okay            | faster, lighter    | low-RAM machine              |
-| `small`    | rough           | fastest, lightest  | quick draft / testing        |
-
-**`-m` / `--openai-model`** — picks the model that translates. `gpt-4o` (default)
-is high quality; `gpt-4o-mini` is ~18× cheaper with a small quality dip.
-
-**`-n` / `--notes`** — the single most valuable option. One line of context about
-the video (topic, character or speaker names, setting) makes both the
-transcription *and* translation noticeably more accurate and consistent. Use it.
-
-### Running the two halves separately
-
-Sometimes you want to **check the Japanese transcript before paying to translate
-it**, or you already have a Japanese `.srt` and only need the English. You can
-run each stage on its own:
-
-```bash
-# Just transcribe (local, free) → produces video.jvs/ja.srt
-uv run jap-video-sub transcribe video.mp4
-
-# Just translate an existing Japanese .srt → produces ...en.srt
-uv run jap-video-sub translate video.jvs/ja.srt
-```
-
-### Good to know
-
-- **It's resumable.** If a run crashes, runs out of memory, or you hit Ctrl-C,
-  just run the same command again — it skips everything it already finished and
-  picks up where it stopped. (Use `--force` only if you want to redo work.)
-- **Where temp files live.** Intermediate files go in a `<video>.jvs/` folder
-  next to your video. They're what makes resuming possible. Safe to delete.
-- **Audio files work too**, not just video — `.mp3`, `.wav`, `.m4a`, etc.
 
 ---
 
-## 3. How it actually works (the deep dive)
+## Good to know
 
-This section explains the whole pipeline in plain language. No prior knowledge
-assumed — if you've never touched speech-to-text before, you'll still follow it.
+- **Resumable.** A run caches work in a `<video>.jvs/` folder next to the input;
+  re-running skips finished steps. `--force` redoes everything. Safe to delete.
+- **Audio works too**, not just video (`.mp3`, `.wav`, `.m4a`, …).
+- **Privacy & cost.** The heavy transcription is local and free; only a few KB of
+  text is sent to OpenAI (~$0.19 to translate a 1-hour video on `gpt-4o`).
 
-### The core idea
-
-Subtitling a video is really two different jobs glued together:
-
-1. **Listening** — figure out *what words were said* and *exactly when*. This is
-   "speech-to-text" (also called transcription or ASR).
-2. **Translating** — turn those Japanese words into English, without messing up
-   the timing.
-
-This tool keeps these two jobs separate on purpose, because they have very
-different needs. Listening is heavy, slow, and best done privately on your own
-machine. Translating is light, fast, and one place where a big cloud model
-(OpenAI) genuinely does a better job. So we do each where it shines.
-
-### Stage ① — ffmpeg pulls out the audio
-
-A video file is a big container holding a video track, an audio track, maybe
-several. The speech model only cares about audio, and it specifically wants the
-audio in a very particular shape: **16,000 samples per second, mono (one
-channel), 16-bit**. That's exactly the format Whisper was trained on.
-
-So `ffmpeg` rips the audio out and converts it to that exact format, saving a
-small `audio.wav`. Two nice side effects:
-
-- The model never has to resample anything, so it's faster and slightly more
-  accurate.
-- A stripped-down 16kHz mono WAV is *tiny* compared to the video, so everything
-  downstream is cheap to slice and process.
-
-### Stage ② — Whisper listens (this is the heavy part)
-
-**What Whisper is:** Whisper is an open speech-recognition model from OpenAI.
-We run it locally using **MLX**, Apple's framework for running models natively
-on the Mac's own GPU (the "Apple Silicon" chip). That's why this works offline
-and doesn't ship your audio anywhere — the listening happens entirely on your
-laptop.
-
-Now, three real-world problems show up with long videos, and most of the code
-here exists to solve them:
-
-#### Problem A: long videos blow up memory
-
-If you feed a 2-hour file to the model in one go, memory usage balloons and a
-16 GB Mac starts swapping to disk (which makes everything crawl). 
-
-**The fix — chunking.** We split the audio into ~10-minute pieces and process
-them one at a time. But you can't just cut every 10 minutes on the dot — you
-might slice a word clean in half ("Tana—| —ka"). So instead:
-
-1. We ask ffmpeg to scan the audio and find all the **silent gaps** (using a
-   filter called `silencedetect`).
-2. Near each 10-minute mark, we look for the closest silence and cut *there*
-   instead — in a pause, where no words are being spoken.
-
-Result: clean cuts that never split a word, and memory stays flat because we
-only ever hold one small chunk at a time. After each chunk we explicitly tell
-MLX to release its memory so it doesn't accumulate.
-
-#### Problem B: subtitles drift out of sync
-
-Whisper's default timestamps are coarse — it tags whole sentences, so a subtitle
-can appear a beat early or linger too long. But Whisper can *also* report a
-timestamp for **every individual word** if you ask it to (`word_timestamps`).
-
-So we throw away its rough sentence timings and **rebuild each subtitle from the
-word-level timings instead**. Each subtitle now starts on the first real word
-and ends on the last real word — no silent padding. And if there's a long pause
-in the middle of a sentence (someone trailing off, then continuing), we split it
-into two subtitles at the pause. The result lines up tightly with the audio.
-
-#### Problem C: Whisper hallucinates on silence and noise
-
-This is the weird one. When Whisper hears non-speech — breathing, music, moaning,
-or just silence — it doesn't output nothing. It tends to *invent* text. Classic
-failure modes: it repeats a name 50 times, counts upward ("one, two, three…"),
-or produces an endless vowel ("aaaaaaaaa"). This happens because by default each
-new piece of audio is decoded using the previous text as a hint, so once it
-starts repeating, it reinforces its own loop.
-
-We attack this in two places:
-
-- **At the source:** we turn off that "use previous text as a hint" behavior
-  (`condition_on_previous_text=False`). That breaks the feedback loop so the
-  runaway repetition mostly never starts.
-- **After transcribing, before translating** (so we never waste money
-  translating junk), a cleanup pass does three safe, mechanical things:
-  1. Drops absurdly short cues (under 150 ms — real speech isn't that short).
-  2. Collapses identical back-to-back cues (58 copies of "Charlotte" → 1).
-  3. Optionally drops pure non-speech moans — but only elongated single-vowel
-     sounds (あああ, んんん). It's careful to **keep** real short words like はい
-     (yes), うん (yeah), いや (no), so it never eats actual dialogue.
-
-(That last one is what `--keep-non-speech` turns off, if you *want* the moans.)
-
-The output of this whole stage is `ja.srt`: accurate Japanese subtitles with
-tight, word-aligned timestamps.
-
-### Stage ③ — OpenAI translates the text
-
-Now we have Japanese text with perfect timing. The *only* thing left is turning
-the words into English — and crucially, **without disturbing a single
-timestamp.**
-
-Here's the trick that guarantees that: we never ask the model to "produce
-subtitles." We hand it the lines as structured data — basically a numbered list
-— and require it to return the **same numbers** with English text attached.
-Because every line keeps its id, we just paste each translation back onto the
-original timestamped slot. The model literally cannot move a timestamp because it
-never sees or touches one.
-
-A few more things make the translation good and robust:
-
-- **Consistency across a long video.** Names, tone, and terminology should stay
-  the same from start to finish. So as we translate, we feed the model a rolling
-  "here's what came just before" tail of recent English lines. That's why a
-  character's name doesn't randomly change spelling halfway through.
-- **The `--notes` hint flows in here too.** Your one-line description is given to
-  the translator as context for names and terminology.
-- **It never crashes on one bad batch.** Lines are translated in batches of ~40.
-  If a batch fails (bad JSON, the model rambles and hits its output limit, etc.),
-  the code automatically splits that batch in half and retries — down to a single
-  line if needed. A single stubborn line, worst case, keeps its original text
-  rather than blowing up the whole run.
-- **Repetition is capped.** If the source still has a runaway "ああああ…", we
-  collapse it before sending, so the model can't burn tokens echoing it forever.
-
-The result is `video.en.srt` — every timestamp identical to the Japanese, every
-line now in natural English.
-
-### Why this design is nice
-
-- **Private by default.** The big file (your video/audio) never leaves your Mac.
-  Only a few KB of text is sent out to be translated.
-- **Cheap.** The expensive part (transcription) is free and local. You only pay
-  OpenAI for a tiny amount of text. (~$0.19 to translate a 1-hour video on
-  `gpt-4o`; far less on `gpt-4o-mini`.)
-- **Tough.** Chunking + per-chunk caching means a crash costs you one chunk, not
-  the whole video. Re-run and it resumes.
-- **Tunable.** Faster model, cheaper translator, bigger/smaller chunks, keep or
-  drop non-speech — all one flag away.
-
----
-
-## Memory control (advanced)
-
-`large-v3` needs roughly 2.9 GB of active memory, but MLX likes to *hold onto*
-freed GPU memory to reuse it quickly — on a long run that pool was observed
-climbing to ~7 GB. The `--cache-limit-gb 2` flag (on by default) caps that
-reuse pool, cutting the footprint roughly in half **with zero effect on
-accuracy** — it only limits idle, reusable memory, never the model itself. Each
-chunk prints its peak memory so you can watch it stay flat.
-
-## Performance & cost (Apple M1, 16 GB)
-
-- **Transcription:** roughly real-time to ~1.5× with `large-v3` (so a 2-hour
-  video ≈ ~70 min). `turbo` is several times faster for a small accuracy hit.
-- **Memory:** stays flat, no swapping, thanks to chunking + the cache cap.
-- **Translation:** a few seconds per chunk. **~$0.19 for a 1-hour video** on
-  `gpt-4o`; `gpt-4o-mini` is ~18× cheaper.
+Deep dive on how the pipeline works: **[cli/README.md](cli/README.md)**.
+Desktop architecture: **[desktop/README.md](desktop/README.md)**.

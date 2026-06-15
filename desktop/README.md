@@ -10,16 +10,16 @@ timeline, and grab the English `.srt`.
 
 ## Run it (dev)
 
-From the repo root, the CLI must work first:
+The sibling `cli/` package must work first:
 
 ```bash
-uv sync                 # installs the Python CLI (see ../README.md)
+cd ../cli && uv sync     # installs the Python CLI (see ../cli/README.md)
 ```
 
 Then the app:
 
 ```bash
-cd app
+cd ../desktop
 npm install
 npm run dev:electron     # Vite + Electron, with the real CLI behind it
 ```
@@ -39,8 +39,8 @@ URL flags for browser mode:
 Translation uses OpenAI. On first launch the app asks for your key and stores it
 in the **macOS Keychain** (service `jap-video-sub`, account `openai-api-key`) —
 you can inspect or revoke it in Keychain Access. The key is injected into the
-CLI's environment at run time; in dev it also falls back to a `.env` in the repo
-root.
+CLI's environment at run time; in dev it also falls back to a `.env` in the
+`cli/` package.
 
 ## Tests
 
@@ -58,8 +58,8 @@ What's covered:
 | `tests/e2e/bridge.spec.ts` | Full setup → running → done flow + the timeline (Playwright, mock source) |
 | `tests/e2e/gate.spec.ts` | API-key onboarding gate blocks until a valid key is entered |
 
-The Python side has its own event-contract tests: `uv run pytest` in the repo
-root (`tests/test_events.py`).
+The Python side has its own event-contract tests: `uv run --with pytest pytest`
+in `../cli` (`cli/tests/test_events.py`).
 
 ## Architecture
 
@@ -95,7 +95,7 @@ Key files:
   browser dev replay it, so they stay faithful to the contract.
 
 The event contract itself is defined and documented in the CLI:
-`../jap_video_sub/events.py`.
+`../cli/jap_video_sub/events.py`.
 
 ## Not done yet (the "ship to others" path)
 

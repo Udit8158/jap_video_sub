@@ -20,14 +20,16 @@ import { getKey, setKey } from "./keychain.js";
 import { buildArgs } from "./buildArgs.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(__dirname, "..", ".."); // jap_video_sub/ repo root
+// The Python CLI lives in the sibling `cli/` package (desktop/electron -> repo
+// root -> cli). This is the only place the desktop app knows where the engine is.
+const CLI_DIR = path.resolve(__dirname, "..", "..", "cli");
 const DEV_URL = process.env.JVS_DEV_URL;
 
 /** True if the repo .env already holds a usable OPENAI_API_KEY (dev fallback so
  * personal use doesn't get nagged for a key it already has). */
 function envFileHasKey() {
   try {
-    const txt = fs.readFileSync(path.join(REPO_ROOT, ".env"), "utf8");
+    const txt = fs.readFileSync(path.join(CLI_DIR, ".env"), "utf8");
     const m = txt.match(/^\s*OPENAI_API_KEY\s*=\s*(.+?)\s*$/m);
     const v = m && m[1].trim().replace(/^["']|["']$/g, "");
     return !!v && v.startsWith("sk-") && !/your-key|\.\.\./.test(v);
@@ -46,7 +48,7 @@ async function startRun(event, jobId, options) {
   const env = { ...process.env };
   if (key) env.OPENAI_API_KEY = key;
 
-  const child = spawn("uv", buildArgs(options), { cwd: REPO_ROOT, env });
+  const child = spawn("uv", buildArgs(options), { cwd: CLI_DIR, env });
   jobs.set(jobId, child);
 
   let buffer = "";

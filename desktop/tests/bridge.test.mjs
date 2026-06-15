@@ -3,7 +3,7 @@
 // the stream is well-formed. This exercises the exact code path in
 // electron/main.js without needing a GUI/display.
 //
-// Run: node app/tests/bridge.test.mjs   (cwd anywhere; resolves repo root)
+// Run: node desktop/tests/bridge.test.mjs   (cwd anywhere; resolves the CLI dir)
 
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -11,14 +11,15 @@ import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(__dirname, "..", "..");
+// The Python CLI lives in the sibling cli/ package (mirrors electron/main.js).
+const CLI_DIR = path.resolve(__dirname, "..", "..", "cli");
 
 function runSimulated() {
   return new Promise((resolve, reject) => {
     const child = spawn(
       "uv",
       ["run", "jap-video-sub", "run", "Bridge Test.mp4", "--json", "--simulate"],
-      { cwd: REPO_ROOT },
+      { cwd: CLI_DIR },
     );
     const events = [];
     let buffer = "";
