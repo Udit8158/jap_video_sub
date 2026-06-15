@@ -18,6 +18,8 @@ export interface ChunkState {
   enLines?: number;
   peakGb?: number;
   transcribeSeconds?: number;
+  transcribeDone?: number;
+  transcribeTotal?: number;
   translateSeconds?: number;
   translateDone?: number;
   translateTotal?: number;
@@ -127,6 +129,14 @@ export function reducer(state: JobState, action: Action): JobState {
           stage: e.stage === "transcribe" ? "transcribing" : "translating",
         }),
       };
+    case "transcribe_progress":
+      return {
+        ...s,
+        chunks: patchChunk(s.chunks, e.index, {
+          transcribeDone: e.done,
+          transcribeTotal: e.total,
+        }),
+      };
     case "transcribe_done":
       return {
         ...s,
@@ -192,6 +202,40 @@ export function reducer(state: JobState, action: Action): JobState {
     default:
       return s;
   }
+}
+
+// Fraction (0..1) of one chunk's total work that's complete, blending its two
+// stages. Transcription dominates wall-clock time, so it carries most of the
+// weight — this keeps the overall bar honest rather than jumping 0→100 at chunk
+// boundaries (which is all the coarse `overall_pct` event gives, esp. for a
+// single chunk).
+const TRANSCRIBE_WEIGHT = 0.85;
+const TRANSLATE_WEIGHT = 0.15;
+
+function chunkFraction(c: ChunkState): number {
+  if (c.stage === "done" || c.enLines != null) return 1;
+  let f = 0;
+  // Transcribe stage.
+  if (c.cached || c.jaLines != null || c.stage === "translating") {
+    f += TRANSCRIBE_WEIGHT;
+  } else if (c.transcribeTotal && c.transcribeTotal > 0) {
+    f += TRANSCRIBE_WEIGHT * ((c.transcribeDone ?? 0) / c.transcribeTotal);
+  }
+  // Translate stage.
+  if (c.translateTotal && c.translateTotal > 0) {
+    f += TRANSLATE_WEIGHT * ((c.translateDone ?? 0) / c.translateTotal);
+  }
+  return f;
+}
+
+/** Overall job progress (0..100), derived from real per-chunk sub-progress so
+ * the top bar advances smoothly within a chunk, not just between chunks. */
+export function overallPercent(state: JobState): number {
+  if (state.status === "done") return 100;
+  const total = state.total || state.chunks.length;
+  if (!total) return 0;
+  const sum = state.chunks.reduce((acc, c) => acc + chunkFraction(c), 0);
+  return Math.min(100, Math.round((sum / total) * 100));
 }
 
 export function useJob(source: EventSource) {

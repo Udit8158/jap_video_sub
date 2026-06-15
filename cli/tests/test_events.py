@@ -92,3 +92,29 @@ def test_translate_progress_is_monotonic_and_bounded():
             assert e["done"] >= last  # non-decreasing
             last = e["done"]
         assert evs[-1]["done"] == total  # ends at 100%
+
+
+def test_transcribe_progress_is_monotonic_and_bounded():
+    events = _capture_events()
+    by_chunk: dict[int, list[dict]] = {}
+    for e in events:
+        if e["type"] == "transcribe_progress":
+            by_chunk.setdefault(e["index"], []).append(e)
+    assert by_chunk, "expected transcribe_progress events"
+    for idx, evs in by_chunk.items():
+        total = evs[-1]["total"]
+        last = -1
+        for e in evs:
+            assert 0 <= e["done"] <= total
+            assert e["done"] >= last  # non-decreasing
+            last = e["done"]
+        assert evs[-1]["done"] == total  # ends at 100%
+
+
+def test_transcribe_progress_precedes_transcribe_done():
+    events = _capture_events()
+    plan = next(e for e in events if e["type"] == "plan")
+    for idx in range(1, plan["total"] + 1):
+        seq = [e["type"] for e in events if e.get("index") == idx]
+        assert "transcribe_progress" in seq
+        assert seq.index("transcribe_progress") < seq.index("transcribe_done")

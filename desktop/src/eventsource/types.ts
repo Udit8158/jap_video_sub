@@ -49,6 +49,13 @@ export interface StageStartEvent extends BaseEvent {
   stage: "transcribe" | "translate";
 }
 
+export interface TranscribeProgressEvent extends BaseEvent {
+  type: "transcribe_progress";
+  index: number;
+  done: number; // audio frames seeked so far
+  total: number; // total audio frames in the chunk
+}
+
 export interface TranscribeDoneEvent extends BaseEvent {
   type: "transcribe_done";
   index: number;
@@ -113,6 +120,7 @@ export type JvsEvent =
   | EstimateEvent
   | ChunkStartEvent
   | StageStartEvent
+  | TranscribeProgressEvent
   | TranscribeDoneEvent
   | TranslateProgressEvent
   | TranslateDoneEvent

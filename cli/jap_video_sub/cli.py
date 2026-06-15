@@ -16,6 +16,13 @@ from pathlib import Path
 import typer
 from dotenv import load_dotenv
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
 from . import audio as audio_mod
 from . import events as events_mod
@@ -103,6 +110,60 @@ def _load_model(model: str) -> None:
         transcribe_mod.preload(model)
 
 
+def _transcribe_chunk(
+    chunk_wav: Path,
+    model: str,
+    prompt: str | None,
+    vflag: bool | None,
+    drop_nonspeech: bool,
+    index: int,
+) -> list[srt_mod.Segment]:
+    """Transcribe one chunk with live progress.
+
+    The percentage comes straight from how far MLX-Whisper has seeked through the
+    chunk's audio. In human mode it drives a `rich` progress bar; in JSON mode it
+    emits `transcribe_progress` events. Progress events fire only on whole-percent
+    changes, so a long chunk doesn't flood the stream.
+    """
+    last_pct = -1
+
+    def emit(done: int, tot: int) -> None:
+        nonlocal last_pct
+        pct = int(done / tot * 100) if tot else 0
+        if pct != last_pct:
+            last_pct = pct
+            events_mod.emitter.emit(
+                "transcribe_progress", index=index, done=done, total=tot
+            )
+
+    # Only show the bar in plain human mode. JSON mode (quiet) and --verbose
+    # (Whisper prints segments itself) just get the events.
+    if _json_mode() or vflag is True:
+        return transcribe_mod.transcribe(
+            chunk_wav, model=model, initial_prompt=prompt, verbose=vflag,
+            drop_nonspeech=drop_nonspeech, progress_cb=emit,
+        )
+
+    with Progress(
+        TextColumn("  [cyan]· [1/2] transcribing[/]"),
+        BarColumn(bar_width=None),
+        TaskProgressColumn(),
+        TimeRemainingColumn(compact=True),
+        console=console,
+        transient=True,
+    ) as prog:
+        task = prog.add_task("transcribe", total=100)
+
+        def cb(done: int, tot: int) -> None:
+            prog.update(task, completed=(int(done / tot * 100) if tot else 0))
+            emit(done, tot)
+
+        return transcribe_mod.transcribe(
+            chunk_wav, model=model, initial_prompt=prompt, verbose=vflag,
+            drop_nonspeech=drop_nonspeech, progress_cb=cb,
+        )
+
+
 def _plan_chunks(
     wav: Path, work: Path, force: bool, duration: float, chunk_seconds: float
 ) -> tuple[list[tuple[float, float]], Path]:
@@ -182,10 +243,7 @@ def _get_japanese(
         transcribe_mod.reset_peak_memory()
         chunk_wav = chunks_dir / f"chunk_{i:03d}.wav"
         audio_mod.slice_audio(wav, start, end, chunk_wav)
-        local = transcribe_mod.transcribe(
-            chunk_wav, model=model, initial_prompt=prompt, verbose=vflag,
-            drop_nonspeech=drop_nonspeech,
-        )
+        local = _transcribe_chunk(chunk_wav, model, prompt, vflag, drop_nonspeech, i)
         # shift chunk-local timestamps to absolute position in the full video
         local = [
             srt_mod.Segment(s.index, s.start + start, s.end + start, s.text)
@@ -320,7 +378,6 @@ def _run_pipeline(
                 "cached", index=i, scope="transcribe", lines=len(ja_local)
             )
         else:
-            console.print("  [bold cyan]· [1/2] Transcribing…[/]")
             events_mod.emitter.emit("stage_start", index=i, stage="transcribe")
             if not model_loaded:
                 _load_model(whisper_model)
@@ -329,9 +386,8 @@ def _run_pipeline(
             transcribe_mod.reset_peak_memory()
             chunk_wav = chunks_dir / f"chunk_{i:03d}.wav"
             audio_mod.slice_audio(wav, start, end, chunk_wav)
-            local = transcribe_mod.transcribe(
-                chunk_wav, model=whisper_model, initial_prompt=prompt, verbose=vflag,
-                drop_nonspeech=drop_nonspeech,
+            local = _transcribe_chunk(
+                chunk_wav, whisper_model, prompt, vflag, drop_nonspeech, i
             )
             ja_local = [
                 srt_mod.Segment(s.index, s.start + start, s.end + start, s.text)

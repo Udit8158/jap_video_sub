@@ -1,38 +1,56 @@
-{"type": "run_start", "t": 1781459384.28, "video": "Demo Lecture.mp4", "output": "Demo Lecture.en.srt", "whisper_model": "large-v3", "openai_model": "gpt-4o", "notes": "", "chunk_minutes": 10.0}
-{"type": "audio_ready", "t": 1781459384.383, "duration": 1500.0}
-{"type": "plan", "t": 1781459384.383, "total": 3, "chunks": [{"index": 1, "start": 0.0, "end": 500.0}, {"index": 2, "start": 500.0, "end": 1000.0}, {"index": 3, "start": 1000.0, "end": 1500.0}]}
-{"type": "estimate", "t": 1781459384.383, "est_usd": 0.0792, "est_seconds": 900.0}
-{"type": "chunk_start", "t": 1781459384.383, "index": 1, "total": 3, "start": 0.0, "end": 500.0, "overall_pct": 0, "eta_seconds": 12.0}
-{"type": "stage_start", "t": 1781459384.383, "index": 1, "stage": "transcribe"}
-{"type": "transcribe_done", "t": 1781459384.688, "index": 1, "lines": 45, "seconds": 2.4, "peak_gb": 2.8}
-{"type": "stage_start", "t": 1781459384.689, "index": 1, "stage": "translate"}
-{"type": "translate_progress", "t": 1781459384.773, "index": 1, "done": 0, "total": 45}
-{"type": "translate_progress", "t": 1781459384.858, "index": 1, "done": 15, "total": 45}
-{"type": "translate_progress", "t": 1781459384.94, "index": 1, "done": 30, "total": 45}
-{"type": "translate_progress", "t": 1781459385.024, "index": 1, "done": 45, "total": 45}
-{"type": "translate_progress", "t": 1781459385.024, "index": 1, "done": 45, "total": 45}
-{"type": "translate_done", "t": 1781459385.025, "index": 1, "lines": 45, "seconds": 1.1}
-{"type": "chunk_done", "t": 1781459385.025, "index": 1, "total": 3, "seconds": 3.6, "overall_pct": 33, "eta_seconds": 8.0}
-{"type": "chunk_start", "t": 1781459385.025, "index": 2, "total": 3, "start": 500.0, "end": 1000.0, "overall_pct": 33, "eta_seconds": 8.0}
-{"type": "stage_start", "t": 1781459385.025, "index": 2, "stage": "transcribe"}
-{"type": "transcribe_done", "t": 1781459385.33, "index": 2, "lines": 48, "seconds": 2.4, "peak_gb": 2.8}
-{"type": "stage_start", "t": 1781459385.33, "index": 2, "stage": "translate"}
-{"type": "translate_progress", "t": 1781459385.41, "index": 2, "done": 0, "total": 48}
-{"type": "translate_progress", "t": 1781459385.496, "index": 2, "done": 16, "total": 48}
-{"type": "translate_progress", "t": 1781459385.581, "index": 2, "done": 32, "total": 48}
-{"type": "translate_progress", "t": 1781459385.665, "index": 2, "done": 48, "total": 48}
-{"type": "translate_progress", "t": 1781459385.665, "index": 2, "done": 48, "total": 48}
-{"type": "translate_done", "t": 1781459385.665, "index": 2, "lines": 48, "seconds": 1.1}
-{"type": "chunk_done", "t": 1781459385.665, "index": 2, "total": 3, "seconds": 3.6, "overall_pct": 66, "eta_seconds": 4.0}
-{"type": "chunk_start", "t": 1781459385.665, "index": 3, "total": 3, "start": 1000.0, "end": 1500.0, "overall_pct": 66, "eta_seconds": 4.0}
-{"type": "stage_start", "t": 1781459385.665, "index": 3, "stage": "transcribe"}
-{"type": "transcribe_done", "t": 1781459385.97, "index": 3, "lines": 51, "seconds": 2.4, "peak_gb": 2.8}
-{"type": "stage_start", "t": 1781459385.971, "index": 3, "stage": "translate"}
-{"type": "translate_progress", "t": 1781459386.051, "index": 3, "done": 0, "total": 51}
-{"type": "translate_progress", "t": 1781459386.136, "index": 3, "done": 17, "total": 51}
-{"type": "translate_progress", "t": 1781459386.221, "index": 3, "done": 34, "total": 51}
-{"type": "translate_progress", "t": 1781459386.305, "index": 3, "done": 51, "total": 51}
-{"type": "translate_progress", "t": 1781459386.309, "index": 3, "done": 51, "total": 51}
-{"type": "translate_done", "t": 1781459386.309, "index": 3, "lines": 51, "seconds": 1.1}
-{"type": "chunk_done", "t": 1781459386.309, "index": 3, "total": 3, "seconds": 3.6, "overall_pct": 100, "eta_seconds": 0.0}
-{"type": "run_done", "t": 1781459386.31, "output": "Demo Lecture.en.srt", "ja_lines": 144, "en_lines": 144, "seconds": 1.9}
+{"type": "run_start", "t": 1781501269.236, "video": "Demo Lecture.mp4", "output": "Demo Lecture.en.srt", "whisper_model": "large-v3", "openai_model": "gpt-4o", "notes": "", "chunk_minutes": 10.0}
+{"type": "audio_ready", "t": 1781501269.341, "duration": 1500.0}
+{"type": "plan", "t": 1781501269.341, "total": 3, "chunks": [{"index": 1, "start": 0.0, "end": 500.0}, {"index": 2, "start": 500.0, "end": 1000.0}, {"index": 3, "start": 1000.0, "end": 1500.0}]}
+{"type": "estimate", "t": 1781501269.341, "est_usd": 0.0792, "est_seconds": 900.0}
+{"type": "chunk_start", "t": 1781501269.341, "index": 1, "total": 3, "start": 0.0, "end": 500.0, "overall_pct": 0, "eta_seconds": 12.0}
+{"type": "stage_start", "t": 1781501269.341, "index": 1, "stage": "transcribe"}
+{"type": "transcribe_progress", "t": 1781501269.406, "index": 1, "done": 0, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501269.471, "index": 1, "done": 12500, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501269.537, "index": 1, "done": 25000, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501269.601, "index": 1, "done": 37500, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501269.666, "index": 1, "done": 50000, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501269.666, "index": 1, "done": 50000, "total": 50000}
+{"type": "transcribe_done", "t": 1781501269.666, "index": 1, "lines": 45, "seconds": 2.4, "peak_gb": 2.8}
+{"type": "stage_start", "t": 1781501269.666, "index": 1, "stage": "translate"}
+{"type": "translate_progress", "t": 1781501269.75, "index": 1, "done": 0, "total": 45}
+{"type": "translate_progress", "t": 1781501269.836, "index": 1, "done": 15, "total": 45}
+{"type": "translate_progress", "t": 1781501269.918, "index": 1, "done": 30, "total": 45}
+{"type": "translate_progress", "t": 1781501270.003, "index": 1, "done": 45, "total": 45}
+{"type": "translate_progress", "t": 1781501270.003, "index": 1, "done": 45, "total": 45}
+{"type": "translate_done", "t": 1781501270.003, "index": 1, "lines": 45, "seconds": 1.1}
+{"type": "chunk_done", "t": 1781501270.003, "index": 1, "total": 3, "seconds": 3.6, "overall_pct": 33, "eta_seconds": 8.0}
+{"type": "chunk_start", "t": 1781501270.003, "index": 2, "total": 3, "start": 500.0, "end": 1000.0, "overall_pct": 33, "eta_seconds": 8.0}
+{"type": "stage_start", "t": 1781501270.003, "index": 2, "stage": "transcribe"}
+{"type": "transcribe_progress", "t": 1781501270.068, "index": 2, "done": 0, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501270.132, "index": 2, "done": 12500, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501270.197, "index": 2, "done": 25000, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501270.259, "index": 2, "done": 37500, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501270.324, "index": 2, "done": 50000, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501270.324, "index": 2, "done": 50000, "total": 50000}
+{"type": "transcribe_done", "t": 1781501270.324, "index": 2, "lines": 48, "seconds": 2.4, "peak_gb": 2.8}
+{"type": "stage_start", "t": 1781501270.324, "index": 2, "stage": "translate"}
+{"type": "translate_progress", "t": 1781501270.41, "index": 2, "done": 0, "total": 48}
+{"type": "translate_progress", "t": 1781501270.491, "index": 2, "done": 16, "total": 48}
+{"type": "translate_progress", "t": 1781501270.576, "index": 2, "done": 32, "total": 48}
+{"type": "translate_progress", "t": 1781501270.661, "index": 2, "done": 48, "total": 48}
+{"type": "translate_progress", "t": 1781501270.661, "index": 2, "done": 48, "total": 48}
+{"type": "translate_done", "t": 1781501270.661, "index": 2, "lines": 48, "seconds": 1.1}
+{"type": "chunk_done", "t": 1781501270.661, "index": 2, "total": 3, "seconds": 3.6, "overall_pct": 66, "eta_seconds": 4.0}
+{"type": "chunk_start", "t": 1781501270.661, "index": 3, "total": 3, "start": 1000.0, "end": 1500.0, "overall_pct": 66, "eta_seconds": 4.0}
+{"type": "stage_start", "t": 1781501270.661, "index": 3, "stage": "transcribe"}
+{"type": "transcribe_progress", "t": 1781501270.726, "index": 3, "done": 0, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501270.788, "index": 3, "done": 12500, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501270.853, "index": 3, "done": 25000, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501270.919, "index": 3, "done": 37500, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501270.984, "index": 3, "done": 50000, "total": 50000}
+{"type": "transcribe_progress", "t": 1781501270.984, "index": 3, "done": 50000, "total": 50000}
+{"type": "transcribe_done", "t": 1781501270.984, "index": 3, "lines": 51, "seconds": 2.4, "peak_gb": 2.8}
+{"type": "stage_start", "t": 1781501270.984, "index": 3, "stage": "translate"}
+{"type": "translate_progress", "t": 1781501271.067, "index": 3, "done": 0, "total": 51}
+{"type": "translate_progress", "t": 1781501271.15, "index": 3, "done": 17, "total": 51}
+{"type": "translate_progress", "t": 1781501271.235, "index": 3, "done": 34, "total": 51}
+{"type": "translate_progress", "t": 1781501271.321, "index": 3, "done": 51, "total": 51}
+{"type": "translate_progress", "t": 1781501271.321, "index": 3, "done": 51, "total": 51}
+{"type": "translate_done", "t": 1781501271.321, "index": 3, "lines": 51, "seconds": 1.1}
+{"type": "chunk_done", "t": 1781501271.321, "index": 3, "total": 3, "seconds": 3.6, "overall_pct": 100, "eta_seconds": 0.0}
+{"type": "run_done", "t": 1781501271.321, "output": "Demo Lecture.en.srt", "ja_lines": 144, "en_lines": 144, "seconds": 2.0}

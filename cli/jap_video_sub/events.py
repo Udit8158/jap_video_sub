@@ -26,6 +26,7 @@ Event types (payload fields beyond type/t):
   estimate          est_usd, est_seconds
   chunk_start       index, total, start, end, overall_pct, eta_seconds
   stage_start       index, stage("transcribe"|"translate")
+  transcribe_progress index, done, total   (done/total = audio frames seeked)
   transcribe_done   index, lines, seconds, peak_gb
   translate_progress index, done, total
   translate_done    index, lines, seconds

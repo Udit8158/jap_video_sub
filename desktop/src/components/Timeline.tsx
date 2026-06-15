@@ -19,7 +19,13 @@ interface Props {
 function transcribeFill(c: ChunkState): number | "indeterminate" {
   if (c.cached || c.jaLines != null || c.stage === "translating" || c.stage === "done")
     return 100;
-  if (c.stage === "transcribing") return "indeterminate";
+  if (c.stage === "transcribing") {
+    // Real progress straight from how far Whisper has seeked through the audio;
+    // fall back to the indeterminate sweep only until the first update arrives.
+    if (c.transcribeTotal && c.transcribeTotal > 0)
+      return Math.round(((c.transcribeDone ?? 0) / c.transcribeTotal) * 100);
+    return "indeterminate";
+  }
   return 0;
 }
 

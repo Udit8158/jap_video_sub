@@ -2,6 +2,7 @@
 // of the chunk currently being worked, plus overall progress and ETA.
 
 import type { JobState } from "../useJob";
+import { overallPercent } from "../useJob";
 import { Timeline } from "./Timeline";
 import { clock, dur, basename } from "../format";
 
@@ -23,6 +24,8 @@ export function RunningView({ state, onCancel }: Props) {
         : "Preparing"
     : "Working";
 
+  const pct = overallPercent(state);
+
   return (
     <section className="running" data-testid="running">
       <header className="running__head">
@@ -42,12 +45,12 @@ export function RunningView({ state, onCancel }: Props) {
         <div className="overall__bar">
           <span
             className="overall__fill"
-            style={{ width: `${state.overallPct}%` }}
+            style={{ width: `${pct}%` }}
             data-testid="overall-fill"
           />
         </div>
         <div className="overall__meta mono">
-          <span data-testid="overall-pct">{state.overallPct}%</span>
+          <span data-testid="overall-pct">{pct}%</span>
           {state.etaSeconds > 0 && <span>{dur(state.etaSeconds)} left</span>}
         </div>
       </div>
@@ -72,7 +75,9 @@ export function RunningView({ state, onCancel }: Props) {
               {active.jaLines != null
                 ? `${active.jaLines} lines · ${active.peakGb?.toFixed(1)} GB peak`
                 : active.stage === "transcribing"
-                  ? "listening…"
+                  ? active.transcribeTotal
+                    ? `${Math.round(((active.transcribeDone ?? 0) / active.transcribeTotal) * 100)}% listened`
+                    : "listening…"
                   : "—"}
             </dd>
           </div>

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-import os
+import contextlib
 from pathlib import Path
+import os
+from typing import Callable
 
 # Hide Hugging Face's "Fetching N files" cache-check bars, which print on every
 # run (even when fully cached) and look like a re-download. Must be set before
@@ -91,6 +93,58 @@ def preload(model: str = "large-v3") -> None:
     ModelHolder.get_model(repo, mx.float16)  # matches transcribe()'s default dtype
 
 
+@contextlib.contextmanager
+def _patch_progress(progress_cb: Callable[[int, int], None] | None):
+    """Forward MLX-Whisper's internal decode progress to `progress_cb`.
+
+    mlx_whisper.transcribe drives a `tqdm.tqdm(total=content_frames)` bar and
+    calls `pbar.update()` as it seeks through the audio. We temporarily swap that
+    tqdm for a shim that reports cumulative progress as `(frames_done, total)` —
+    letting the caller render a real transcription progress bar / emit events —
+    then restore the original. No-op when `progress_cb` is None.
+    """
+    if progress_cb is None:
+        yield
+        return
+
+    # NB: `mlx_whisper.transcribe` the *attribute* is the function (re-exported in
+    # mlx_whisper/__init__.py), so fetch the actual submodule from sys.modules to
+    # patch the `tqdm` it calls.
+    import sys
+    import mlx_whisper  # noqa: F401  (ensures the submodule is loaded)
+
+    mwt = sys.modules["mlx_whisper.transcribe"]
+
+    class _Bar:
+        def __init__(self, *args, total: int = 0, **kwargs) -> None:
+            self.total = int(total or 0)
+            self.n = 0
+
+        def update(self, n: int = 1) -> None:
+            self.n += n
+            if self.total:
+                progress_cb(min(self.n, self.total), self.total)
+
+        # tqdm API surface mlx may touch — all harmless no-ops here.
+        def set_description(self, *a, **k) -> None: ...
+        def set_postfix(self, *a, **k) -> None: ...
+        def close(self) -> None: ...
+        def __enter__(self) -> "_Bar":
+            return self
+        def __exit__(self, *exc) -> bool:
+            return False
+
+    class _Shim:
+        tqdm = _Bar
+
+    original = mwt.tqdm
+    mwt.tqdm = _Shim
+    try:
+        yield
+    finally:
+        mwt.tqdm = original
+
+
 def transcribe(
     audio_path: Path,
     model: str = "large-v3",
@@ -99,6 +153,7 @@ def transcribe(
     refine: bool = True,
     split_gap: float = 0.8,
     drop_nonspeech: bool = True,
+    progress_cb: Callable[[int, int], None] | None = None,
 ) -> list[Segment]:
     """Transcribe Japanese audio to time-stamped Japanese segments.
 
@@ -121,16 +176,17 @@ def transcribe(
 
     _quiet_hf_logging()
     repo = MODELS.get(model, model)  # allow passing a raw repo id too
-    result = mlx_whisper.transcribe(
-        str(audio_path),
-        path_or_hf_repo=repo,
-        language="ja",
-        task="transcribe",
-        word_timestamps=True,
-        initial_prompt=initial_prompt,
-        condition_on_previous_text=False,  # break hallucination feedback loops
-        verbose=verbose,
-    )
+    with _patch_progress(progress_cb):
+        result = mlx_whisper.transcribe(
+            str(audio_path),
+            path_or_hf_repo=repo,
+            language="ja",
+            task="transcribe",
+            word_timestamps=True,
+            initial_prompt=initial_prompt,
+            condition_on_previous_text=False,  # break hallucination feedback loops
+            verbose=verbose,
+        )
 
     raw = result.get("segments", [])
     segments = _refine(raw, split_gap) if refine else _plain(raw)

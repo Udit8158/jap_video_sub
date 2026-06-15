@@ -75,9 +75,14 @@ def simulate_run(
             eta_seconds=eta,
         )
 
-        # Stage 1: transcribe
+        # Stage 1: transcribe (with incremental progress — done/total are audio
+        # frames, ~100 per second, matching the real pipeline's units).
         em.emit("stage_start", index=i, stage="transcribe")
-        nap(0.3)
+        frames = max(1, int((c["end"] - c["start"]) * 100))
+        for done in range(0, frames + 1, max(1, frames // 4)):
+            nap(0.06)
+            em.emit("transcribe_progress", index=i, done=min(done, frames), total=frames)
+        em.emit("transcribe_progress", index=i, done=frames, total=frames)
         lines = 42 + i * 3
         em.emit("transcribe_done", index=i, lines=lines, seconds=2.4, peak_gb=2.8)
 
