@@ -3,8 +3,8 @@
 // Responsibilities:
 //   1. Create the window (loads the Vite dev server in dev, the built files in
 //      production).
-//   2. Bridge the renderer to the real CLI: on "jvs:start-run", spawn
-//      `jap-video-sub run --json ...`, read stdout line-by-line, parse each JSON
+//   2. Bridge the renderer to the real CLI: on "subly:start-run", spawn
+//      `subly run --json ...`, read stdout line-by-line, parse each JSON
 //      event, and forward it to the renderer over IPC.
 //
 // The spawn is the ONLY place that knows how to launch the pipeline. Today it
@@ -23,7 +23,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // The Python CLI lives in the sibling `cli/` package (desktop/electron -> repo
 // root -> cli). This is the only place the desktop app knows where the engine is.
 const CLI_DIR = path.resolve(__dirname, "..", "..", "cli");
-const DEV_URL = process.env.JVS_DEV_URL;
+const DEV_URL = process.env.SUBLY_DEV_URL;
 
 /** True if the repo .env already holds a usable OPENAI_API_KEY (dev fallback so
  * personal use doesn't get nagged for a key it already has). */
@@ -61,12 +61,12 @@ async function startRun(event, jobId, options) {
       if (!line) continue;
       try {
         const evt = JSON.parse(line);
-        if (!sender.isDestroyed()) sender.send(`jvs:event:${jobId}`, evt);
+        if (!sender.isDestroyed()) sender.send(`subly:event:${jobId}`, evt);
       } catch {
         // Non-JSON line on stdout (shouldn't happen in --json mode). Surface as
         // a log event rather than crashing the stream.
         if (!sender.isDestroyed())
-          sender.send(`jvs:event:${jobId}`, {
+          sender.send(`subly:event:${jobId}`, {
             type: "log",
             t: Date.now() / 1000,
             message: line,
@@ -84,7 +84,7 @@ async function startRun(event, jobId, options) {
 
   child.on("error", (err) => {
     if (!sender.isDestroyed())
-      sender.send(`jvs:event:${jobId}`, {
+      sender.send(`subly:event:${jobId}`, {
         type: "error",
         t: Date.now() / 1000,
         stage: "spawn",
@@ -96,7 +96,7 @@ async function startRun(event, jobId, options) {
   child.on("close", (code) => {
     jobs.delete(jobId);
     if (code !== 0 && stderr && !sender.isDestroyed()) {
-      sender.send(`jvs:event:${jobId}`, {
+      sender.send(`subly:event:${jobId}`, {
         type: "error",
         t: Date.now() / 1000,
         stage: "process",
@@ -104,25 +104,25 @@ async function startRun(event, jobId, options) {
         fatal: true,
       });
     }
-    if (!sender.isDestroyed()) sender.send(`jvs:exit:${jobId}`, code);
+    if (!sender.isDestroyed()) sender.send(`subly:exit:${jobId}`, code);
   });
 }
 
 function registerIpc() {
   // Renderer owns the job id, so these are fire-and-forget sends; listeners can
   // attach synchronously right after startRun returns.
-  ipcMain.on("jvs:start-run", (event, { jobId, options }) => {
+  ipcMain.on("subly:start-run", (event, { jobId, options }) => {
     startRun(event, jobId, options); // async; events arrive over IPC
   });
 
-  ipcMain.on("jvs:cancel-run", (_event, { jobId }) => {
+  ipcMain.on("subly:cancel-run", (_event, { jobId }) => {
     const child = jobs.get(jobId);
     if (child) child.kill("SIGTERM");
   });
 
   // Onboarding only needs to know whether a key is available — the secret itself
   // never crosses back to the renderer. Keychain first, then the dev .env.
-  ipcMain.handle("jvs:has-key", async () => {
+  ipcMain.handle("subly:has-key", async () => {
     try {
       if (await getKey()) return true;
     } catch {
@@ -130,11 +130,11 @@ function registerIpc() {
     }
     return envFileHasKey();
   });
-  ipcMain.handle("jvs:set-key", async (_event, key) => {
+  ipcMain.handle("subly:set-key", async (_event, key) => {
     await setKey(String(key).trim());
   });
 
-  ipcMain.handle("jvs:pick-file", async () => {
+  ipcMain.handle("subly:pick-file", async () => {
     const res = await dialog.showOpenDialog({
       title: "Choose a Japanese-audio video",
       properties: ["openFile"],
@@ -146,7 +146,7 @@ function registerIpc() {
     return res.canceled || res.filePaths.length === 0 ? null : res.filePaths[0];
   });
 
-  ipcMain.handle("jvs:reveal", (_event, p) => {
+  ipcMain.handle("subly:reveal", (_event, p) => {
     if (p) shell.showItemInFolder(p);
   });
 }

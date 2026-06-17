@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { getKey, setKey, deleteKey } from "../electron/keychain.js";
 
-const SERVICE = `jap-video-sub-test-${process.pid}`;
+const SERVICE = `subly-test-${process.pid}`;
 const ACCOUNT = "test-account";
 const SECRET = "sk-test-" + Math.random().toString(36).slice(2);
 

@@ -1,5 +1,5 @@
 // TypeScript mirror of the Python `events.py` contract. Keep in sync with the
-// CLI: these are the JSON-lines events emitted by `jap-video-sub run --json`.
+// CLI: these are the JSON-lines events emitted by `subly run --json`.
 
 export interface BaseEvent {
   type: string;
@@ -113,7 +113,7 @@ export interface ErrorEvent extends BaseEvent {
 // Strict discriminated union of known events (enables `switch (e.type)`
 // narrowing). Unknown/future event types still arrive at runtime — the reducer's
 // `default` branch ignores them — but they aren't part of the static union.
-export type JvsEvent =
+export type SublyEvent =
   | RunStartEvent
   | AudioReadyEvent
   | PlanEvent
@@ -153,7 +153,7 @@ export interface RunHandle {
 export interface EventSource {
   run(
     options: RunOptions,
-    onEvent: (event: JvsEvent) => void,
+    onEvent: (event: SublyEvent) => void,
     onExit: (code: number | null) => void,
   ): RunHandle;
 }

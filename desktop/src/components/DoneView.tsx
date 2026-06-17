@@ -11,7 +11,7 @@ interface Props {
 
 export function DoneView({ state, onReset }: Props) {
   const reveal = () => {
-    if (state.output) window.jvs?.revealInFinder?.(state.output);
+    if (state.output) window.subly?.revealInFinder?.(state.output);
   };
 
   return (
@@ -48,7 +48,7 @@ export function DoneView({ state, onReset }: Props) {
       </dl>
 
       <div className="done__actions">
-        {window.jvs?.revealInFinder && (
+        {window.subly?.revealInFinder && (
           <button className="btn btn--accent" onClick={reveal} data-testid="reveal">
             Reveal in Finder
           </button>

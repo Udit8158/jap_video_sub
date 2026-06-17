@@ -1,6 +1,6 @@
-# jap-video-sub · desktop app
+# Subly · desktop app
 
-A Mac desktop wrapper around the `jap-video-sub` CLI. Drop a Japanese-audio
+A Mac desktop wrapper around the `subly` CLI. Drop a Japanese-audio
 video, watch it get transcribed and translated chunk-by-chunk on a live
 timeline, and grab the English `.srt`.
 
@@ -37,7 +37,7 @@ URL flags for browser mode:
 ## API key
 
 Translation uses OpenAI. On first launch the app asks for your key and stores it
-in the **macOS Keychain** (service `jap-video-sub`, account `openai-api-key`) —
+in the **macOS Keychain** (service `subly`, account `openai-api-key`) —
 you can inspect or revoke it in Keychain Access. The key is injected into the
 CLI's environment at run time; in dev it also falls back to a `.env` in the
 `cli/` package.
@@ -64,12 +64,12 @@ in `../cli` (`cli/tests/test_events.py`).
 ## Architecture
 
 The UI talks to the pipeline through exactly **one seam**: a subprocess that
-emits JSON-lines events (`jap-video-sub run --json`). Everything else is built on
+emits JSON-lines events (`subly run --json`). Everything else is built on
 that contract.
 
 ```
 ┌────────────────────────┐  spawn   ┌──────────────────────────┐
-│ Electron + React (UI)   │ ───────▶ │ jap-video-sub run --json │
+│ Electron + React (UI)   │ ───────▶ │ subly run --json │
 │ reducer → timeline/views│ ◀─────── │ 1 JSON event per line     │
 └────────────────────────┘  stdout  └──────────────────────────┘
         │ EventSource seam
@@ -85,7 +85,7 @@ Key files:
   for a bundled runtime — the renderer doesn't change.
 - `electron/buildArgs.js` — RunOptions → CLI argv (unit-tested).
 - `electron/keychain.js` — OpenAI key in the Keychain via the `security` CLI.
-- `electron/preload.js` — the `contextBridge` exposing a small `window.jvs` API.
+- `electron/preload.js` — the `contextBridge` exposing a small `window.subly` API.
 - `src/eventsource/` — the `EventSource` seam: `types.ts` (the contract, mirrors
   Python `events.py`), `electron.ts`, `mock.ts`.
 - `src/useJob.ts` — reducer that turns the event stream into `JobState`. Every
@@ -95,7 +95,7 @@ Key files:
   browser dev replay it, so they stay faithful to the contract.
 
 The event contract itself is defined and documented in the CLI:
-`../cli/jap_video_sub/events.py`.
+`../cli/subly/events.py`.
 
 ## Not done yet (the "ship to others" path)
 

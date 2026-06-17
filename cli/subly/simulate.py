@@ -1,7 +1,7 @@
 """Replay a realistic event stream without running the model or calling an API.
 
 This drives UI development and automated tests: the desktop app can run
-`jap-video-sub run anything.mp4 --json --simulate` and receive the exact same
+`subly run anything.mp4 --json --simulate` and receive the exact same
 event shapes the real pipeline emits, in a few seconds, deterministically.
 """
 

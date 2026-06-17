@@ -1,13 +1,13 @@
-// Shape of the bridge the preload script exposes on window.jvs. Keep in sync
+// Shape of the bridge the preload script exposes on window.subly. Keep in sync
 // with electron/preload.js.
-import type { JvsEvent, RunOptions } from "./eventsource/types";
+import type { SublyEvent, RunOptions } from "./eventsource/types";
 
 declare global {
   interface Window {
-    jvs?: {
+    subly?: {
       startRun: (options: RunOptions) => string;
       cancelRun: (jobId: string) => void;
-      onEvent: (jobId: string, cb: (e: JvsEvent) => void) => () => void;
+      onEvent: (jobId: string, cb: (e: SublyEvent) => void) => () => void;
       onExit: (jobId: string, cb: (code: number | null) => void) => () => void;
       pickFile?: () => Promise<string | null>;
       revealInFinder?: (path: string) => void;

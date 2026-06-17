@@ -5,7 +5,7 @@ import { buildArgs } from "../electron/buildArgs.js";
 // Minimal: just a video → always run + --json, no stray flags.
 {
   const a = buildArgs({ video: "/v/a.mp4" });
-  assert.deepEqual(a, ["run", "jap-video-sub", "run", "/v/a.mp4", "--json"]);
+  assert.deepEqual(a, ["run", "subly", "run", "/v/a.mp4", "--json"]);
 }
 
 // Full settings map to the right flags, in order.
@@ -22,7 +22,7 @@ import { buildArgs } from "../electron/buildArgs.js";
     force: true,
   });
   assert.deepEqual(a, [
-    "run", "jap-video-sub", "run", "/v/Lecture 12.mp4", "--json",
+    "run", "subly", "run", "/v/Lecture 12.mp4", "--json",
     "--output", "/out/subs.srt",
     "--whisper-model", "turbo",
     "--openai-model", "gpt-4o-mini",

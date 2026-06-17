@@ -16,7 +16,7 @@ from collections.abc import Callable
 
 from .srt import Segment, with_text
 
-DEFAULT_MODEL = os.environ.get("JVS_OPENAI_MODEL", "gpt-4o")
+DEFAULT_MODEL = os.environ.get("SUBLY_OPENAI_MODEL", "gpt-4o")
 MAX_TOKENS = 4096  # plenty for a subtitle batch; bounds runaway repetition cost
 
 SYSTEM_PROMPT = """\

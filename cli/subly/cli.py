@@ -1,8 +1,8 @@
-"""Command-line interface for jap_video_sub.
+"""Command-line interface for subly.
 
 Pipeline:  video --(ffmpeg)--> audio.wav --(mlx-whisper)--> ja.srt --(openai)--> en.srt
 
-Intermediate files live in `<video>.jvs/` next to the input, so re-running
+Intermediate files live in `<video>.subly/` next to the input, so re-running
 resumes where it left off. Use --force to redo a step.
 """
 
@@ -63,7 +63,7 @@ def _overall(done: int, total: int, chunk_durs: list[float]) -> tuple[int, float
 
 
 def _workdir(video: Path) -> Path:
-    d = video.parent / f"{video.stem}.jvs"
+    d = video.parent / f"{video.stem}.subly"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -284,7 +284,7 @@ def _run_pipeline(
     """Full per-chunk pipeline: each chunk is transcribed then translated, with
     per-stage progress, per-chunk timing, and overall progress/ETA."""
     work = _workdir(video)
-    console.print(f"[bold]jap-video-sub[/] · {video.name}")
+    console.print(f"[bold]subly[/] · {video.name}")
     events_mod.emitter.emit(
         "run_start",
         video=str(video),
@@ -504,7 +504,7 @@ def run(
     video: Path = typer.Argument(..., dir_okay=False, help="Japanese-audio video/audio file."),
     output: Path = typer.Option(None, "--output", "-o", help="Output .srt path (default: <video>.en.srt)."),
     whisper_model: str = typer.Option("large-v3", "--whisper-model", "-w", help="large-v3 | turbo | medium | small."),
-    openai_model: str = typer.Option(None, "--openai-model", "-m", help="OpenAI model (default: gpt-4o or $JVS_OPENAI_MODEL)."),
+    openai_model: str = typer.Option(None, "--openai-model", "-m", help="OpenAI model (default: gpt-4o or $SUBLY_OPENAI_MODEL)."),
     notes: str = typer.Option("", "--notes", "-n", help="Context about the video (topic, character names) to improve accuracy."),
     force: bool = typer.Option(False, "--force", "-f", help="Redo every step, ignoring cached files."),
     keep_japanese: bool = typer.Option(False, "--keep-japanese", help="Also copy the Japanese .srt next to the output."),
@@ -565,7 +565,7 @@ def transcribe(
 ) -> None:
     """Only transcribe: produce the Japanese .srt (no translation)."""
     work = _workdir(video)
-    console.print(f"[bold]jap-video-sub transcribe[/] · {video.name}")
+    console.print(f"[bold]subly transcribe[/] · {video.name}")
     chunk_seconds = chunk_minutes * 60 if chunk_minutes > 0 else float("inf")
     wav = _get_audio(video, work, force)
     _get_japanese(
@@ -586,7 +586,7 @@ def translate(
     """Only translate an existing Japanese .srt → English .srt."""
     out = output or japanese_srt.with_suffix(".en.srt")
     segments = srt_mod.read(japanese_srt)
-    console.print(f"[bold]jap-video-sub translate[/] · {japanese_srt.name} ({len(segments)} segments)")
+    console.print(f"[bold]subly translate[/] · {japanese_srt.name} ({len(segments)} segments)")
     _translate(segments, japanese_srt.parent, out, openai_model, notes, force)
     console.print(f"\n[bold green]Done.[/] → [bold]{out}[/]")
 

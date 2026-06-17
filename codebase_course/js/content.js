@@ -1,5 +1,5 @@
 /* ============================================================================
- * jap-video-sub · Codebase Course — CONTENT
+ * subly · Codebase Course — CONTENT
  * Every module, lesson, code excerpt and quiz lives here as data.
  * The renderer in app.js turns these "blocks" into the page.
  *
@@ -19,7 +19,7 @@
  * ==========================================================================*/
 
 const COURSE = {
-  title: "jap-video-sub",
+  title: "Subly",
   subtitle: "The Codebase Course",
   tagline: "Build a Japanese-video → English-subtitle engine, one real file at a time.",
 
@@ -64,7 +64,7 @@ const COURSE = {
           id: "what-it-does",
           title: "What are we even building?",
           blocks: [
-            { lead: "<b>jap-video-sub</b> takes a video with <b>Japanese audio</b> and produces a <b>time-synced English <code>.srt</code> subtitle file</b> — the kind you drop into VLC, YouTube or Premiere and the subtitles just appear, in sync." },
+            { lead: "<b>Subly</b> takes a video with <b>Japanese audio</b> and produces a <b>time-synced English <code>.srt</code> subtitle file</b> — the kind you drop into VLC, YouTube or Premiere and the subtitles just appear, in sync." },
             { p: "The headline trick is <b>privacy + cost</b>: the heavy listening happens 100% on your own Mac, offline. The only thing that ever leaves your machine is a few kilobytes of <i>text</i> sent to OpenAI to be translated. Your actual video file never goes anywhere." },
             { stat: [
               { n: "~$0.19", label: "to translate a 1-hour video (gpt-4o)" },
@@ -112,7 +112,7 @@ const COURSE = {
             { p: "How does a TypeScript app talk to a Python program? Through the narrowest possible interface — <b>one seam</b>. When you run the CLI with <code>--json</code>, it prints <b>one JSON object per line</b> describing what just happened:" },
             { code: `{"type": "chunk_start", "t": 1718370000.12, "index": 3, "total": 12, ...}
 {"type": "transcribe_done", "t": 1718370041.5, "index": 3, "lines": 57, ...}`, lang: "json", file: "what the CLI prints with --json" },
-            { p: "The desktop app reads that stream line by line and updates its UI. That's the <i>entire</i> contract between the two halves. The Python side defines it in <code>cli/jap_video_sub/events.py</code>; the TypeScript side mirrors it in <code>desktop/src/eventsource/types.ts</code>. Keep those two in sync and everything works." },
+            { p: "The desktop app reads that stream line by line and updates its UI. That's the <i>entire</i> contract between the two halves. The Python side defines it in <code>cli/subly/events.py</code>; the TypeScript side mirrors it in <code>desktop/src/eventsource/types.ts</code>. Keep those two in sync and everything works." },
             { note: "A whole module (7) is dedicated to this event contract, because it's the cleverest architectural decision in the project: it lets you build and test the GUI against a <i>fake</i> event stream, with no model and no API calls.", kind: "info", title: "Foreshadowing" },
             { steps: [
               { t: "The CLI is the product", d: "All real logic lives in the Python package. Everything else is a client." },
@@ -145,7 +145,7 @@ const COURSE = {
           q: "How do the two halves communicate?",
           options: ["A shared database", "A REST API over HTTP", "One JSON object per line printed on stdout", "Files written to a temp folder"],
           answer: 2,
-          explain: "`jap-video-sub run --json` emits JSON-lines events on stdout. That single stream is the entire seam between Python and TypeScript.",
+          explain: "`subly run --json` emits JSON-lines events on stdout. That single stream is the entire seam between Python and TypeScript.",
         },
       ],
     },
@@ -201,7 +201,7 @@ const COURSE = {
         raise RuntimeError(f"ffmpeg failed:\\n{proc.stderr.strip()}")
     if not dst.exists() or dst.stat().st_size == 0:
         raise RuntimeError("ffmpeg produced no audio output.")
-    return dst`, lang: "python", file: "cli/jap_video_sub/audio.py", lines: "18–42" },
+    return dst`, lang: "python", file: "cli/subly/audio.py", lines: "18–42" },
             { p: "Things a careful engineer notices here:" },
             { list: [
               "<code>-vn</code> means <b>v</b>ideo <b>n</b>one — we explicitly discard the video track. <code>-ac 1</code> = audio channels 1 (mono). <code>-ar 16000</code> = audio rate. <code>-c:a pcm_s16le</code> = the 16-bit codec.",
@@ -230,7 +230,7 @@ const COURSE = {
     try:
         return float(proc.stdout.strip())
     except ValueError:
-        raise RuntimeError(f"Could not read duration of {path}")`, lang: "python", file: "cli/jap_video_sub/audio.py", lines: "45–59" },
+        raise RuntimeError(f"Could not read duration of {path}")`, lang: "python", file: "cli/subly/audio.py", lines: "45–59" },
             { note: "The <code>-of default=noprint_wrappers=1:nokey=1</code> flag tells ffprobe to print just the bare value — so <code>stdout</code> is something like <code>1500.04</code> that we can <code>float()</code> directly. Small detail, but it's why no parsing/regex is needed.", kind: "tip" },
           ],
         },
@@ -321,7 +321,7 @@ const COURSE = {
             end = float(line.split("silence_end:")[1].split("|")[0].strip())
             silences.append((start, end))
             start = None
-    return silences`, lang: "python", file: "cli/jap_video_sub/audio.py", lines: "62–87 (trimmed)" },
+    return silences`, lang: "python", file: "cli/subly/audio.py", lines: "62–87 (trimmed)" },
             { list: [
               "<b>noise=-30dB</b> — anything below −30 dB counts as \"silence.\" Lower (e.g. −40) is stricter; higher catches more.",
               "<b>d=0.4</b> — a gap must last at least 0.4s to count, so we don't treat tiny pauses between syllables as cut points.",
@@ -362,7 +362,7 @@ const COURSE = {
     for i in range(len(points) - 1):
         if points[i + 1] - points[i] > 0.5:      # drop degenerate slivers
             chunks.append((points[i], points[i + 1]))
-    return chunks`, lang: "python", file: "cli/jap_video_sub/audio.py", lines: "90–122" },
+    return chunks`, lang: "python", file: "cli/subly/audio.py", lines: "90–122" },
             { diagram: `<div class="ascii">
 <b>targets</b>   (even 10-min marks)
   0 ──────────┬──────────┬──────────┬────────── 40:00
@@ -391,7 +391,7 @@ const COURSE = {
         "-c", "copy", "-loglevel", "error",
         str(dst),
     ]
-    ...`, lang: "python", file: "cli/jap_video_sub/audio.py", lines: "125–137 (trimmed)" },
+    ...`, lang: "python", file: "cli/subly/audio.py", lines: "125–137 (trimmed)" },
             { p: "In the pipeline loop (<code>cli.py</code>), each chunk is transcribed, written to its own little <code>.srt</code>, and then its memory is explicitly released before the next chunk starts. That's what keeps the footprint flat:" },
             { code: `audio_mod.slice_audio(wav, start, end, chunk_wav)
 local = _transcribe_chunk(chunk_wav, model, prompt, ...)
@@ -400,7 +400,7 @@ local = [Segment(s.index, s.start + start, s.end + start, s.text)
          for s in local]
 srt_mod.write(chunk_ja, local)        # persist for resume on crash/OOM
 chunk_wav.unlink(missing_ok=True)     # delete the temp slice
-transcribe_mod.clear_cache()          # release MLX's GPU buffers`, lang: "python", file: "cli/jap_video_sub/cli.py", lines: "244–255 (trimmed)" },
+transcribe_mod.clear_cache()          # release MLX's GPU buffers`, lang: "python", file: "cli/subly/cli.py", lines: "244–255 (trimmed)" },
             { note: "Spot the line <code>s.start + start</code>. Each chunk is transcribed as if it started at time 0, so Whisper hands back timestamps local to the chunk. We add the chunk's real <code>start</code> offset to shift every timestamp back to its true position in the full video. Forget this and chunk 2's subtitles all appear at 0:00.", kind: "key", title: "The timestamp shift" },
             { q: "Why does writing each chunk to its own .srt make the whole run resumable?", a: "If the process crashes (or runs out of memory) on chunk 7, chunks 1–6 are already saved to disk. Re-running sees those files and skips straight to chunk 7 instead of redoing everything." },
           ],
@@ -465,7 +465,7 @@ MODELS = {
     "turbo":    "mlx-community/whisper-large-v3-turbo",
     "medium":   "mlx-community/whisper-medium-mlx",
     "small":    "mlx-community/whisper-small-mlx",
-}`, lang: "python", file: "cli/jap_video_sub/transcribe.py", lines: "26–31" },
+}`, lang: "python", file: "cli/subly/transcribe.py", lines: "26–31" },
             { note: "A <b>model</b> here is just a big file of numbers (weights) plus code to run them. \"Loading the model\" means reading those numbers into memory; \"transcribing\" means feeding audio through them. Bigger model = more accurate but slower and heavier. <code>large-v3</code> is the default; <code>small</code> is a quick rough draft.", kind: "info", title: "Jargon, demystified" },
           ],
         },
@@ -483,7 +483,7 @@ MODELS = {
     initial_prompt=initial_prompt,       # the --notes hint, for names/terms
     condition_on_previous_text=False,    # break hallucination feedback loops
     verbose=verbose,
-)`, lang: "python", file: "cli/jap_video_sub/transcribe.py", lines: "180–189" },
+)`, lang: "python", file: "cli/subly/transcribe.py", lines: "180–189" },
             { list: [
               "<b>language=\"ja\"</b> — we always know the audio is Japanese, so we tell the model instead of letting it auto-detect (faster, no misdetection).",
               "<b>task=\"transcribe\"</b> — Whisper can itself translate to English, but we deliberately <i>don't</i> use that. Its translation is mediocre; we want clean Japanese here and let a dedicated model translate in Stage ③.",
@@ -514,7 +514,7 @@ MODELS = {
             prev_end = float(w["end"])
         if cue_words:
             out.append(_cue_from_words(cue_words))
-    return out`, lang: "python", file: "cli/jap_video_sub/transcribe.py", lines: "210–237 (trimmed)" },
+    return out`, lang: "python", file: "cli/subly/transcribe.py", lines: "210–237 (trimmed)" },
             { steps: [
               { t: "Each cue starts on a real word", d: "No silent padding before the first word or after the last." },
               { t: "Split on long internal pauses", d: "If someone trails off mid-sentence and resumes after > split_gap (0.8s), that becomes two subtitles, not one long one." },
@@ -556,7 +556,7 @@ def _patch_progress(progress_cb):
     try:
         yield
     finally:
-        mwt.tqdm = original      # ALWAYS restore — even on error`, lang: "python", file: "cli/jap_video_sub/transcribe.py", lines: "96–145 (trimmed)" },
+        mwt.tqdm = original      # ALWAYS restore — even on error`, lang: "python", file: "cli/subly/transcribe.py", lines: "96–145 (trimmed)" },
             { list: [
               "It's a <b>context manager</b> (<code>@contextlib.contextmanager</code> + <code>try/finally</code>) so the original <code>tqdm</code> is <i>always</i> put back, even if transcription throws.",
               "The shim implements just enough of tqdm's API (<code>update</code>, <code>set_description</code>, <code>close</code>, enter/exit) to be a drop-in replacement — the extras are harmless no-ops.",
@@ -579,7 +579,7 @@ def _patch_progress(progress_cb):
 def clear_cache() -> None:
     """Release MLX's GPU buffer cache between chunks to keep memory bounded."""
     import mlx.core as mx
-    mx.clear_cache()`, lang: "python", file: "cli/jap_video_sub/transcribe.py", lines: "34–58 (trimmed)" },
+    mx.clear_cache()`, lang: "python", file: "cli/subly/transcribe.py", lines: "34–58 (trimmed)" },
             { p: "Combined with chunking from Module 3, this is why a 2-hour video runs on a 16 GB Mac without swapping. Each chunk even prints its peak memory so you can watch it stay flat (<code>peak 2.8 GB</code>, <code>peak 2.8 GB</code>, …)." },
           ],
         },
@@ -652,7 +652,7 @@ def clear_cache() -> None:
             { code: `result = mlx_whisper.transcribe(
     ...,
     condition_on_previous_text=False,  # break hallucination feedback loops
-)`, lang: "python", file: "cli/jap_video_sub/transcribe.py" },
+)`, lang: "python", file: "cli/subly/transcribe.py" },
             { p: "There's a small cost — losing cross-window context can slightly hurt coherence — but for this use case (lots of pauses, music, ambient noise) the trade is clearly worth it. The model stops eating its own tail." },
           ],
         },
@@ -679,7 +679,7 @@ def clear_cache() -> None:
 
     for i, s in enumerate(collapsed, start=1):
         s.index = i
-    return collapsed`, lang: "python", file: "cli/jap_video_sub/clean.py", lines: "49–71" },
+    return collapsed`, lang: "python", file: "cli/subly/clean.py", lines: "49–71" },
             { steps: [
               { t: "Drop micro-cues", d: "Anything under 150 ms. Real spoken words aren't that short, so these are artifacts." },
               { t: "Collapse identical neighbours", d: "58 back-to-back \"Charlotte\" cues become one cue spanning the whole range — instead of 58 subtitles." },
@@ -707,7 +707,7 @@ def _is_nonspeech_sound(text: str) -> bool:
     if len(s) < 3:
         return False                          # too short to be a sustained moan
     chars = set(s)
-    return len(chars) == 1 and next(iter(chars)) in _VOWELS`, lang: "python", file: "cli/jap_video_sub/clean.py", lines: "21–46 (trimmed)" },
+    return len(chars) == 1 and next(iter(chars)) in _VOWELS`, lang: "python", file: "cli/subly/clean.py", lines: "21–46 (trimmed)" },
             { list: [
               "<b>Normalize first.</b> <code>str.maketrans</code> maps small kana (ぁ), katakana (ア) and variants all to one canonical vowel (あ), so spelling variations of the same moan compare equal.",
               "<b>Strip noise.</b> Punctuation, spaces and the long-vowel mark ー are removed before judging, so <code>あ、あ、あ</code> reduces to <code>あああ</code>.",
@@ -789,7 +789,7 @@ suitable for on-screen subtitles. Rules:
 - If a line is a non-verbal sound (moaning, laughing) repeated many times,
   render it BRIEFLY. Never repeat a sound more than a few times.
 - Return ONLY valid JSON of the form: {"lines": [{"id": <int>, "en": "<text>"}]}.
-- Include every id you were given, exactly once."""`, lang: "python", file: "cli/jap_video_sub/translate.py", lines: "22–34" },
+- Include every id you were given, exactly once."""`, lang: "python", file: "cli/subly/translate.py", lines: "22–34" },
             { p: "And the API call pins the behavior down hard:" },
             { code: `resp = client.chat.completions.create(
     model=model,
@@ -800,7 +800,7 @@ suitable for on-screen subtitles. Rules:
         {"role": "system", "content": system},
         {"role": "user",   "content": user},
     ],
-)`, lang: "python", file: "cli/jap_video_sub/translate.py", lines: "64–73" },
+)`, lang: "python", file: "cli/subly/translate.py", lines: "64–73" },
             { list: [
               "<b>temperature=0.2</b> — we want faithful, consistent translation, not creative variety.",
               "<b>response_format json_object</b> — the API guarantees syntactically valid JSON, so parsing won't fail on stray prose.",
@@ -818,14 +818,14 @@ if notes:
     context_parts.append(f"About this video (use for terminology/names):\\n{notes}")
 if context_tail:
     joined = "\\n".join(context_tail[-6:])          # last 6 English lines
-    context_parts.append(f"Preceding English lines (for continuity):\\n{joined}")`, lang: "python", file: "cli/jap_video_sub/translate.py", lines: "93–98" },
+    context_parts.append(f"Preceding English lines (for continuity):\\n{joined}")`, lang: "python", file: "cli/subly/translate.py", lines: "93–98" },
             { p: "And because long videos are translated chunk by chunk, the <i>end</i> of one chunk seeds the <i>start</i> of the next. In <code>cli.py</code>:" },
             { code: `en_local = translate_mod.translate_segments(
     ja_local, model=openai_model, notes=notes,
     prior_context=prior_ctx,          # tail of the PREVIOUS chunk's English
     progress=progress,
 )
-prior_ctx = [s.text for s in en_local][-6:]   # seed the NEXT chunk`, lang: "python", file: "cli/jap_video_sub/cli.py", lines: "421–429 (trimmed)" },
+prior_ctx = [s.text for s in en_local][-6:]   # seed the NEXT chunk`, lang: "python", file: "cli/subly/cli.py", lines: "421–429 (trimmed)" },
             { note: "This is why a name doesn't randomly change spelling halfway through a two-hour video, even though it was translated in twelve independent chunks. The continuity tail stitches them together.", kind: "tip" },
           ],
         },
@@ -846,7 +846,7 @@ prior_ctx = [s.text for s in en_local][-6:]   # seed the NEXT chunk`, lang: "pyt
             out.update(_safe_translate(client, model, batch[mid:], notes, context_tail))
             return out
         seg = batch[0]
-        return {seg.index: _collapse_repeats(seg.text)}   # last resort: keep original`, lang: "python", file: "cli/jap_video_sub/translate.py", lines: "118–136" },
+        return {seg.index: _collapse_repeats(seg.text)}   # last resort: keep original`, lang: "python", file: "cli/subly/translate.py", lines: "118–136" },
             { steps: [
               { t: "Batch of 40 fails", d: "Maybe the model hit its output limit mid-JSON. Don't give up." },
               { t: "Split in half, retry each", d: "20 + 20. Recurse. Smaller batches are more likely to succeed." },
@@ -862,7 +862,7 @@ for seg in missing:
 
 for seg in batch:
     en = out.get(seg.index, seg.text)   # last-resort: keep original
-    translated.append(with_text(seg, en))`, lang: "python", file: "cli/jap_video_sub/translate.py", lines: "166–174" },
+    translated.append(with_text(seg, en))`, lang: "python", file: "cli/subly/translate.py", lines: "166–174" },
             { note: "Also note <code>_call</code> retries transient network/rate-limit errors with <b>exponential backoff</b> (<code>sleep(min(2**attempt, 30))</code>), and <code>_collapse_repeats</code> squashes runaway \"ああああ…\" before sending so the model can't burn tokens echoing it. Layers upon layers of \"don't let one bad input ruin the run.\"", kind: "key", title: "Defense in depth, again" },
             { q: "What's the absolute worst-case outcome for a single line that the model keeps failing on?", a: "It keeps its original (repeat-collapsed) Japanese text in that timestamped slot. You lose one translation, not the whole video — and the timing is still perfect because the slot never moved." },
           ],
@@ -923,7 +923,7 @@ for seg in batch:
 # - One JSON object per line on stdout, flushed immediately (live, not buffered).
 # - Every event has \`type\` (str) and \`t\` (unix seconds, float).
 # - Unknown/extra fields are allowed; consumers ignore what they don't understand.
-# - New event types may be added over time — treat them as optional.`, lang: "python", file: "cli/jap_video_sub/events.py", lines: "15–21" },
+# - New event types may be added over time — treat them as optional.`, lang: "python", file: "cli/subly/events.py", lines: "15–21" },
             { p: "<code>events.py</code> is the <b>single source of truth</b> for this contract. The same event names and fields are produced by the real pipeline <i>and</i> by the simulator (next lesson), so a UI built against one works against the other." },
             { note: "These four rules are a tiny API design lesson. \"Every event has type and t,\" \"ignore unknown fields,\" \"new types are optional\" — that's <b>forward compatibility</b>. You can add events later without breaking old readers. Real APIs live or die on this.", kind: "key", title: "Why these rules matter" },
           ],
@@ -947,7 +947,7 @@ for seg in batch:
         self._stream.flush()                         # so readers see it live
 
 # Module-level singleton the CLI configures once and the pipeline imports.
-emitter = EventEmitter(enabled=False)`, lang: "python", file: "cli/jap_video_sub/events.py", lines: "47–69 (trimmed)" },
+emitter = EventEmitter(enabled=False)`, lang: "python", file: "cli/subly/events.py", lines: "47–69 (trimmed)" },
             { steps: [
               { t: "One singleton, imported everywhere", d: "The pipeline just calls emitter.emit(...). It never checks a mode." },
               { t: "--json flips one switch", d: "The CLI calls configure(enabled=True) once; suddenly every emit() produces output." },
@@ -988,7 +988,7 @@ emitter = EventEmitter(enabled=False)`, lang: "python", file: "cli/jap_video_sub
           blocks: [
             { p: "The desktop app is TypeScript, so it needs typed versions of these events. <code>desktop/src/eventsource/types.ts</code> is a hand-written mirror of the Python contract — the comment at the top says it out loud:" },
             { code: `// TypeScript mirror of the Python \`events.py\` contract. Keep in sync with the
-// CLI: these are the JSON-lines events emitted by \`jap-video-sub run --json\`.
+// CLI: these are the JSON-lines events emitted by \`subly run --json\`.
 
 export interface TranscribeProgressEvent extends BaseEvent {
   type: "transcribe_progress";
@@ -999,7 +999,7 @@ export interface TranscribeProgressEvent extends BaseEvent {
 
 // Strict discriminated union of all known events — enables \`switch (e.type)\`
 // narrowing in the reducer.
-export type JvsEvent =
+export type SublyEvent =
   | RunStartEvent | AudioReadyEvent | PlanEvent | EstimateEvent
   | ChunkStartEvent | StageStartEvent | TranscribeProgressEvent
   | TranscribeDoneEvent | TranslateProgressEvent | TranslateDoneEvent
@@ -1027,8 +1027,8 @@ export type JvsEvent =
         em.emit("transcribe_done", index=i, lines=lines, seconds=2.4, peak_gb=2.8)
         ... # translate stage, same shape
         em.emit("chunk_done", index=i, ...)
-    em.emit("run_done", output=output, en_lines=total_lines, ...)`, lang: "python", file: "cli/jap_video_sub/simulate.py", lines: "15–113 (trimmed)" },
-            { p: "Run <code>jap-video-sub run anything.mp4 --json --simulate</code> and you get a complete, realistic run in seconds. The desktop app uses this to develop the UI, and the tests use it to prove the bridge parses real CLI output — all without a 3 GB model or a paid API." },
+    em.emit("run_done", output=output, en_lines=total_lines, ...)`, lang: "python", file: "cli/subly/simulate.py", lines: "15–113 (trimmed)" },
+            { p: "Run <code>subly run anything.mp4 --json --simulate</code> and you get a complete, realistic run in seconds. The desktop app uses this to develop the UI, and the tests use it to prove the bridge parses real CLI output — all without a 3 GB model or a paid API." },
             { note: "This is the architectural reward for keeping a narrow contract. One seam → you can stub the seam → the entire frontend becomes buildable and testable in isolation. When people say \"design for testability,\" <i>this</i> is what it buys you.", kind: "key", title: "The whole point" },
           ],
         },
@@ -1086,7 +1086,7 @@ export type JvsEvent =
             { lead: "The desktop app has one job: <b>spawn the CLI, read its event stream, and draw it.</b> It's built on the contract from Module 7. Here's the whole architecture in one picture:" },
             { diagram: `<div class="ascii">
 ┌────────────────────────────┐   spawn    ┌──────────────────────────┐
-│ Electron + React (renderer) │ ─────────▶ │ jap-video-sub run --json │
+│ Electron + React (renderer) │ ─────────▶ │ subly run --json │
 │  reducer → timeline / views │ ◀───────── │  1 JSON event per line    │
 └────────────────────────────┘   stdout   └──────────────────────────┘
         │  EventSource seam (one interface)
@@ -1121,7 +1121,7 @@ const onData = (data) => {
 };
 child.stdout.on("data", onData);`, lang: "javascript", file: "desktop/electron/main.js", lines: "53–86 (trimmed)" },
             { note: "Line-buffering is a classic, must-know pattern for reading any line-delimited stream (logs, network protocols, subprocess output). You can <b>never</b> assume one \"data\" event equals one line. Accumulate, split on the delimiter, keep the leftover for next time.", kind: "key", title: "Pattern: line-buffering" },
-            { p: "Notice the <code>spawn(\"uv\", buildArgs(options), { cwd: CLI_DIR })</code>. That's the seam to the engine: today it runs <code>uv run jap-video-sub …</code> from the repo. To ship to non-developers, you'd swap this one line for a bundled runtime — and the entire renderer stays untouched." },
+            { p: "Notice the <code>spawn(\"uv\", buildArgs(options), { cwd: CLI_DIR })</code>. That's the seam to the engine: today it runs <code>uv run subly …</code> from the repo. To ship to non-developers, you'd swap this one line for a bundled runtime — and the entire renderer stays untouched." },
           ],
         },
         {
@@ -1130,7 +1130,7 @@ child.stdout.on("data", onData);`, lang: "javascript", file: "desktop/electron/m
           blocks: [
             { p: "The UI collects options (model, notes, chunk minutes, checkboxes). <code>buildArgs</code> is a tiny <b>pure function</b> that turns those into the CLI's argument list. It's kept in its own file with no Electron import — specifically so it can be unit-tested in isolation." },
             { code: `export function buildArgs(options) {
-  const args = ["run", "jap-video-sub", "run", options.video, "--json"];
+  const args = ["run", "subly", "run", options.video, "--json"];
   if (options.output)       args.push("--output", options.output);
   if (options.whisperModel) args.push("--whisper-model", options.whisperModel);
   if (options.openaiModel)  args.push("--openai-model", options.openaiModel);
@@ -1156,7 +1156,7 @@ child.stdout.on("data", onData);`, lang: "javascript", file: "desktop/electron/m
 export interface EventSource {
   run(
     options: RunOptions,
-    onEvent: (event: JvsEvent) => void,
+    onEvent: (event: SublyEvent) => void,
     onExit: (code: number | null) => void,
   ): RunHandle;            // RunHandle has .cancel()
 }`, lang: "typescript", file: "desktop/src/eventsource/types.ts", lines: "146–159" },
@@ -1234,7 +1234,7 @@ function chunkFraction(c: ChunkState): number {
           title: "Bonus: the API key in the Keychain",
           blocks: [
             { p: "Translation needs an OpenAI key. The app stores it in the <b>macOS Keychain</b> — not a plain text file — using the built-in <code>security</code> CLI. No native module to compile per Electron version, and the user can inspect or revoke the key in Keychain Access." },
-            { code: `const SERVICE = "jap-video-sub";
+            { code: `const SERVICE = "subly";
 const ACCOUNT = "openai-api-key";
 
 export async function getKey() {

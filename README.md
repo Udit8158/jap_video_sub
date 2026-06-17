@@ -1,4 +1,4 @@
-# jap-video-sub
+# Subly
 
 Turn a **Japanese-audio video** into a **time-synced English `.srt`** — offline-first
 on Apple Silicon (the audio never leaves your Mac; only the small text transcript
@@ -7,7 +7,7 @@ is sent to OpenAI to translate).
 This repo is a small monorepo with two pieces:
 
 ```
-jap-video-sub/
+subly/
 ├── cli/        ← the engine: a Python CLI that does the actual work
 │               (ffmpeg → mlx-whisper transcribe → OpenAI translate)
 └── desktop/    ← a Mac desktop app (Electron + React) that drives the CLI
@@ -16,8 +16,8 @@ jap-video-sub/
 
 The **CLI is the product**; the desktop app is just a friendly front-end that
 spawns it. They talk over exactly one seam: the CLI emits one JSON event per line
-(`jap-video-sub run --json`), and the app reads that stream. The contract lives in
-[`cli/jap_video_sub/events.py`](cli/jap_video_sub/events.py), mirrored in
+(`subly run --json`), and the app reads that stream. The contract lives in
+[`cli/subly/events.py`](cli/subly/events.py), mirrored in
 [`desktop/src/eventsource/types.ts`](desktop/src/eventsource/types.ts) — keep the
 two in sync.
 
@@ -79,19 +79,19 @@ Pass extra CLI flags through the `ARGS=` variable, e.g.
 
 ```bash
 make sub VIDEO="video.mp4"
-# runs:  cd cli && uv run jap-video-sub run "video.mp4"
+# runs:  cd cli && uv run subly run "video.mp4"
 ```
 
 From the repo root without the wrapper, or from anywhere:
 
 ```bash
-uv run --project cli jap-video-sub run "video.mp4"
+uv run --project cli subly run "video.mp4"
 ```
 
 From inside `cli/` (shortest):
 
 ```bash
-cd cli && uv run jap-video-sub run "video.mp4"
+cd cli && uv run subly run "video.mp4"
 ```
 
 Output lands at `<video>.en.srt` next to the input by default.
@@ -102,14 +102,14 @@ Use this to inspect the Japanese transcript before paying to translate:
 
 ```bash
 make transcribe VIDEO="video.mp4"
-# → video.jvs/ja.srt
+# → video.subly/ja.srt
 ```
 
 ### 3. Translate only (an existing Japanese `.srt`)
 
 ```bash
-make translate SRT="video.jvs/ja.srt"
-# → video.jvs/ja.en.srt   (or use ARGS="-o out.srt")
+make translate SRT="video.subly/ja.srt"
+# → video.subly/ja.en.srt   (or use ARGS="-o out.srt")
 ```
 
 ### 4. Desktop app
@@ -138,7 +138,7 @@ API-key onboarding screen).
 |---|---|---|
 | `-o, --output PATH` | `<video>.en.srt` | Where to write the English `.srt` |
 | `-w, --whisper-model` | `large-v3` | Speech model: `large-v3` \| `turbo` \| `medium` \| `small` |
-| `-m, --openai-model` | `gpt-4o` | Translation model (or `$JVS_OPENAI_MODEL`) |
+| `-m, --openai-model` | `gpt-4o` | Translation model (or `$SUBLY_OPENAI_MODEL`) |
 | `-n, --notes TEXT` | — | Context (topic, speaker names) — boosts accuracy a lot |
 | `-c, --chunk-minutes` | `10.0` | Split long audio into chunks for memory safety; `0` disables |
 | `-f, --force` | off | Redo every step, ignore cached files |
@@ -173,7 +173,7 @@ make sub VIDEO="clip.mp4" ARGS="-c 0 --force"
 
 # Two-step: check the Japanese first, then translate it
 make transcribe VIDEO="movie.mp4"
-make translate  SRT="movie.jvs/ja.srt" ARGS="-o movie.en.srt"
+make translate  SRT="movie.subly/ja.srt" ARGS="-o movie.en.srt"
 ```
 
 ---
@@ -184,9 +184,9 @@ The translation step calls OpenAI.
 
 - **CLI:** copy `cli/.env.example` → `cli/.env` and set `OPENAI_API_KEY=sk-...`.
 - **Desktop app:** on first launch it asks for the key and stores it in the macOS
-  **Keychain** (service `jap-video-sub`); in dev it falls back to `cli/.env`.
+  **Keychain** (service `subly`); in dev it falls back to `cli/.env`.
 
-Optional: `JVS_OPENAI_MODEL` sets the default translation model.
+Optional: `SUBLY_OPENAI_MODEL` sets the default translation model.
 
 ---
 
@@ -202,7 +202,7 @@ make test-desktop  # cd desktop && npm test  (typecheck + node + Playwright e2e)
 
 ## Good to know
 
-- **Resumable.** A run caches work in a `<video>.jvs/` folder next to the input;
+- **Resumable.** A run caches work in a `<video>.subly/` folder next to the input;
   re-running skips finished steps. `--force` redoes everything. Safe to delete.
 - **Audio works too**, not just video (`.mp3`, `.wav`, `.m4a`, …).
 - **Privacy & cost.** The heavy transcription is local and free; only a few KB of

@@ -1,5 +1,5 @@
 /* =============================================================================
-   jap-video-sub · Codebase Course — APP ENGINE
+   subly · Codebase Course — APP ENGINE
    Hash router · gamified state (XP/levels/badges) · block renderer ·
    quiz logic · confetti · lightweight syntax highlighter.
    Vanilla JS, no build step. State persists in localStorage.
@@ -28,8 +28,10 @@
   // Both builds (paper "v1" and blackboard "v2 dark") share ONE progress store
   // so your XP / lessons / quizzes follow you when you switch themes. Older
   // builds wrote to per-page keys; we merge those in once on first load.
-  const SAVE_KEY = "jvs_course_shared";
-  const LEGACY_KEYS = ["jvs_course_v1", "jvs_course_v2_dark"];
+  const SAVE_KEY = "subly_course_shared";
+  // Older builds (pre-rename + per-theme) stored progress under these keys; we
+  // fold them into the new shared store once so nobody loses XP on the rename.
+  const LEGACY_KEYS = ["jvs_course_shared", "jvs_course_v1", "jvs_course_v2_dark"];
   const blank = () => ({ xp: 0, lessons: {}, modulesRead: {}, quizzes: {}, badges: {}, seen: false });
   let S = load();
   function readKey(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } }
@@ -171,7 +173,7 @@
 
     sb.innerHTML = "";
     const brand = el("div", "brand");
-    brand.innerHTML = `<div class="brand-logo">字</div><div class="brand-txt"><b>jap-video-sub</b><span>codebase course</span></div>`;
+    brand.innerHTML = `<div class="brand-logo">字</div><div class="brand-txt"><b>Subly</b><span>codebase course</span></div>`;
     brand.onclick = () => go("#/");
     sb.appendChild(brand);
 

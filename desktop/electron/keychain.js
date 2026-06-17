@@ -6,7 +6,7 @@
 
 import { execFile } from "node:child_process";
 
-const SERVICE = "jap-video-sub";
+const SERVICE = "subly";
 const ACCOUNT = "openai-api-key";
 
 function run(args) {

@@ -1,4 +1,4 @@
-# Convenience wrapper for the jap-video-sub monorepo (cli/ + desktop/).
+# Convenience wrapper for the subly monorepo (cli/ + desktop/).
 # These just save you from cd-ing around; everything works directly too.
 
 .PHONY: help setup sub transcribe translate app test test-cli test-desktop
@@ -20,13 +20,13 @@ setup:
 	cd desktop && npm install
 
 sub:
-	cd cli && uv run jap-video-sub run "$(VIDEO)" $(ARGS)
+	cd cli && uv run subly run "$(VIDEO)" $(ARGS)
 
 transcribe:
-	cd cli && uv run jap-video-sub transcribe "$(VIDEO)" $(ARGS)
+	cd cli && uv run subly transcribe "$(VIDEO)" $(ARGS)
 
 translate:
-	cd cli && uv run jap-video-sub translate "$(SRT)" $(ARGS)
+	cd cli && uv run subly translate "$(SRT)" $(ARGS)
 
 app:
 	cd desktop && npm run dev:electron

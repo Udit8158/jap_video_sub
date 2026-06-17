@@ -5,7 +5,7 @@ __pycache__/
 *.egg-info/
 
 # Intermediate work dirs created next to input videos
-*.jvs/
+*.subly/
 
 # Desktop app build artifacts
 desktop/node_modules/

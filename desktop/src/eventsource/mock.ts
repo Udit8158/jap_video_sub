@@ -2,13 +2,13 @@
 // can be built and tested with zero backend. The fixture IS real CLI output, so
 // the mock is always faithful to the contract.
 
-import type { EventSource, JvsEvent, RunHandle, RunOptions } from "./types";
+import type { EventSource, SublyEvent, RunHandle, RunOptions } from "./types";
 import fixture from "../fixtures/simulate.jsonl?raw";
 
-const FIXTURE_EVENTS: JvsEvent[] = fixture
+const FIXTURE_EVENTS: SublyEvent[] = fixture
   .split("\n")
   .filter((l) => l.trim())
-  .map((l) => JSON.parse(l) as JvsEvent);
+  .map((l) => JSON.parse(l) as SublyEvent);
 
 export class MockEventSource implements EventSource {
   // stepMs: delay between events. 0 = fire synchronously (deterministic tests).
@@ -16,7 +16,7 @@ export class MockEventSource implements EventSource {
 
   run(
     options: RunOptions,
-    onEvent: (event: JvsEvent) => void,
+    onEvent: (event: SublyEvent) => void,
     onExit: (code: number | null) => void,
   ): RunHandle {
     let cancelled = false;

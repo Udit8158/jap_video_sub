@@ -1,5 +1,5 @@
 // Abstraction over API-key storage so the onboarding gate is testable.
-//   · Electron  → real Keychain via window.jvs
+//   · Electron  → real Keychain via window.subly
 //   · ?needkey  → in-memory stub (browser demo + Playwright)
 //   · otherwise → not required (browser mock needs no key)
 
@@ -10,12 +10,12 @@ export interface KeyApi {
 }
 
 export function makeKeyApi(): KeyApi {
-  if (typeof window !== "undefined" && window.jvs?.hasApiKey && window.jvs.setApiKey) {
-    const jvs = window.jvs;
+  if (typeof window !== "undefined" && window.subly?.hasApiKey && window.subly.setApiKey) {
+    const bridge = window.subly;
     return {
       required: true,
-      has: () => jvs.hasApiKey!(),
-      set: (k) => jvs.setApiKey!(k),
+      has: () => bridge.hasApiKey!(),
+      set: (k) => bridge.setApiKey!(k),
     };
   }
 

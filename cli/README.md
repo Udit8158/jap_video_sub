@@ -1,4 +1,4 @@
-# jap-video-sub
+# Subly
 
 Turn a **Japanese-audio video** (lectures, talks, anime, long-form — even 2+ hours)
 into a **time-synced English `.srt` subtitle file**.
@@ -49,7 +49,7 @@ This uses [`uv`](https://docs.astral.sh/uv/), a fast Python package manager.
 If you don't have it: `brew install uv`.
 
 ```bash
-cd jap_video_sub/cli      # the CLI lives in the cli/ package
+cd subly/cli      # the CLI lives in the cli/ package
 uv sync                   # creates a virtual env and installs everything
 ```
 
@@ -83,7 +83,7 @@ That's it. You're ready.
 Point it at a video and walk away:
 
 ```bash
-uv run jap-video-sub run video.mp4
+uv run subly run video.mp4
 ```
 
 When it finishes you get **`video.en.srt`** sitting right next to your video.
@@ -98,7 +98,7 @@ step took, memory used, and an overall % with an ETA.
 Every option is optional. Here they are with what each one is *for*:
 
 ```bash
-uv run jap-video-sub run video.mp4 \
+uv run subly run video.mp4 \
   -o subs.srt                    # where to save the result (default: <video>.en.srt)
   -w turbo                       # which speech model to use (see below)
   -m gpt-4o                      # which OpenAI model translates (see below)
@@ -136,11 +136,11 @@ it**, or you already have a Japanese `.srt` and only need the English. You can
 run each stage on its own:
 
 ```bash
-# Just transcribe (local, free) → produces video.jvs/ja.srt
-uv run jap-video-sub transcribe video.mp4
+# Just transcribe (local, free) → produces video.subly/ja.srt
+uv run subly transcribe video.mp4
 
 # Just translate an existing Japanese .srt → produces ...en.srt
-uv run jap-video-sub translate video.jvs/ja.srt
+uv run subly translate video.subly/ja.srt
 ```
 
 ### Good to know
@@ -148,7 +148,7 @@ uv run jap-video-sub translate video.jvs/ja.srt
 - **It's resumable.** If a run crashes, runs out of memory, or you hit Ctrl-C,
   just run the same command again — it skips everything it already finished and
   picks up where it stopped. (Use `--force` only if you want to redo work.)
-- **Where temp files live.** Intermediate files go in a `<video>.jvs/` folder
+- **Where temp files live.** Intermediate files go in a `<video>.subly/` folder
   next to your video. They're what makes resuming possible. Safe to delete.
 - **Audio files work too**, not just video — `.mp3`, `.wav`, `.m4a`, etc.
 

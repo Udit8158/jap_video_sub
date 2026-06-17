@@ -18,7 +18,7 @@ function runSimulated() {
   return new Promise((resolve, reject) => {
     const child = spawn(
       "uv",
-      ["run", "jap-video-sub", "run", "Bridge Test.mp4", "--json", "--simulate"],
+      ["run", "subly", "run", "Bridge Test.mp4", "--json", "--simulate"],
       { cwd: CLI_DIR },
     );
     const events = [];

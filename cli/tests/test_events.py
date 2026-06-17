@@ -11,8 +11,8 @@ from __future__ import annotations
 import io
 import json
 
-from jap_video_sub.events import EventEmitter
-from jap_video_sub.simulate import simulate_run
+from subly.events import EventEmitter
+from subly.simulate import simulate_run
 
 
 def _capture_events() -> list[dict]:

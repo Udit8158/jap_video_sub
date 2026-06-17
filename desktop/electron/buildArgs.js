@@ -2,7 +2,7 @@
 // from main.js (no electron import) so the settings→flags mapping is unit-tested.
 
 export function buildArgs(options) {
-  const args = ["run", "jap-video-sub", "run", options.video, "--json"];
+  const args = ["run", "subly", "run", options.video, "--json"];
   if (options.output) args.push("--output", options.output);
   if (options.whisperModel) args.push("--whisper-model", options.whisperModel);
   if (options.openaiModel) args.push("--openai-model", options.openaiModel);

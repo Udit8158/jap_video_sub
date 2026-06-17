@@ -1,10 +1,10 @@
-// Turns the raw JvsEvent stream into structured UI state via a reducer. This is
+// Turns the raw SublyEvent stream into structured UI state via a reducer. This is
 // the heart of the renderer — every visual (timeline, progress, finish screen)
 // reads from JobState, never from raw events. Pure and framework-light so it's
 // trivial to unit-test.
 
 import { useCallback, useReducer, useRef } from "react";
-import type { EventSource, JvsEvent, RunOptions } from "./eventsource/types";
+import type { EventSource, SublyEvent, RunOptions } from "./eventsource/types";
 
 export type ChunkStage = "pending" | "transcribing" | "translating" | "done";
 
@@ -46,7 +46,7 @@ export interface JobState {
   elapsedSeconds?: number;
   cachedResult?: boolean;
   error?: string;
-  events: JvsEvent[];
+  events: SublyEvent[];
 }
 
 export const initialState: JobState = {
@@ -58,7 +58,7 @@ export const initialState: JobState = {
   events: [],
 };
 
-type Action = { kind: "event"; event: JvsEvent } | { kind: "reset" } | { kind: "cancelled" };
+type Action = { kind: "event"; event: SublyEvent } | { kind: "reset" } | { kind: "cancelled" };
 
 function patchChunk(
   chunks: ChunkState[],

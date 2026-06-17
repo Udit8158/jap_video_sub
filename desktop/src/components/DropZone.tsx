@@ -15,8 +15,8 @@ export function DropZone({ file, onPick }: Props) {
   const [over, setOver] = useState(false);
 
   const pick = async () => {
-    if (window.jvs?.pickFile) {
-      const p = await window.jvs.pickFile();
+    if (window.subly?.pickFile) {
+      const p = await window.subly.pickFile();
       if (p) onPick(p, basename(p));
     } else {
       inputRef.current?.click();
@@ -28,7 +28,7 @@ export function DropZone({ file, onPick }: Props) {
     setOver(false);
     const f = e.dataTransfer.files[0];
     if (!f) return;
-    const path = window.jvs?.pathForFile?.(f) ?? f.name;
+    const path = window.subly?.pathForFile?.(f) ?? f.name;
     onPick(path, f.name);
   };
 
@@ -52,7 +52,7 @@ export function DropZone({ file, onPick }: Props) {
         hidden
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) onPick(window.jvs?.pathForFile?.(f) ?? f.name, f.name);
+          if (f) onPick(window.subly?.pathForFile?.(f) ?? f.name, f.name);
         }}
       />
       {file ? (

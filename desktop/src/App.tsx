@@ -56,7 +56,7 @@ export function App() {
           <span className="wordmark__kanji" aria-hidden>
             字幕
           </span>
-          <span className="wordmark__name mono">jap-video-sub</span>
+          <span className="wordmark__name mono">Subly</span>
         </span>
         {isMock() && <span className="topbar__badge" data-testid="env">demo data</span>}
       </header>

@@ -1,6 +1,6 @@
-# jap-video-sub · Codebase Course
+# Subly · Codebase Course
 
-An interactive, **gamified** course that teaches the entire `jap-video-sub`
+An interactive, **gamified** course that teaches the entire `subly`
 codebase — the Python CLI pipeline (ffmpeg → mlx-whisper → OpenAI) and the
 Electron + React desktop app — one real file at a time.
 

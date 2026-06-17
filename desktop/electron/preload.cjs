@@ -2,7 +2,7 @@
 // process. CommonJS (.cjs) on purpose — Electron loads preload scripts as
 // CommonJS under the default sandbox; an ESM preload silently fails to load.
 //
-// Exposes a small, explicit `window.jvs` API via contextBridge. The renderer
+// Exposes a small, explicit `window.subly` API via contextBridge. The renderer
 // owns the job id (no async id handshake), so listeners can attach synchronously
 // right after startRun.
 
@@ -18,20 +18,20 @@ function on(channel, cb) {
   return () => ipcRenderer.removeListener(channel, listener);
 }
 
-contextBridge.exposeInMainWorld("jvs", {
+contextBridge.exposeInMainWorld("subly", {
   startRun: (options) => {
     const jobId = newJobId();
-    ipcRenderer.send("jvs:start-run", { jobId, options });
+    ipcRenderer.send("subly:start-run", { jobId, options });
     return jobId;
   },
-  cancelRun: (jobId) => ipcRenderer.send("jvs:cancel-run", { jobId }),
-  onEvent: (jobId, cb) => on(`jvs:event:${jobId}`, cb),
-  onExit: (jobId, cb) => on(`jvs:exit:${jobId}`, cb),
+  cancelRun: (jobId) => ipcRenderer.send("subly:cancel-run", { jobId }),
+  onEvent: (jobId, cb) => on(`subly:event:${jobId}`, cb),
+  onExit: (jobId, cb) => on(`subly:exit:${jobId}`, cb),
 
-  pickFile: () => ipcRenderer.invoke("jvs:pick-file"),
-  revealInFinder: (p) => ipcRenderer.invoke("jvs:reveal", p),
-  hasApiKey: () => ipcRenderer.invoke("jvs:has-key"),
-  setApiKey: (key) => ipcRenderer.invoke("jvs:set-key", key),
+  pickFile: () => ipcRenderer.invoke("subly:pick-file"),
+  revealInFinder: (p) => ipcRenderer.invoke("subly:reveal", p),
+  hasApiKey: () => ipcRenderer.invoke("subly:has-key"),
+  setApiKey: (key) => ipcRenderer.invoke("subly:set-key", key),
   // Resolve a dropped File to its absolute path (Electron 32+ removed File.path).
   pathForFile: (file) => {
     try {
