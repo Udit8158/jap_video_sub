@@ -8,6 +8,10 @@ Built for a newer programmer: every concept is explained from scratch, and
 **every code excerpt is real code lifted from this repo** (with the file path
 and line numbers shown), so the course and the codebase never drift apart.
 
+> **Live:** **https://sublyapp.vercel.app/course** — `https://sublyapp.vercel.app`
+> redirects here for now (the root is reserved for a future landing page).
+> Hosted on Vercel from this folder; every push to `main` auto-deploys.
+
 ## What's inside
 
 - **8 modules**, each with several lessons and a checkpoint quiz:
@@ -32,8 +36,9 @@ There are two looks for the exact same course — pick whichever you like:
 - **Blackboard** (`v2/index.html`) — the dark build: chalk-on-slate with neon offset shadows.
 
 Both run on the **same content and the same engine** (`js/content.js` + `js/app.js`),
-so they can never drift apart — only the stylesheet differs. Each keeps its **own**
-saved progress, and the topbar has a link to hop between them.
+so they can never drift apart — only the stylesheet differs. They **share one
+saved-progress store**, so your XP/lessons/quizzes follow you when you hop between
+themes via the topbar link.
 
 ## How to run it
 
@@ -42,14 +47,14 @@ It's a static site — no build step, no dependencies. Pick either:
 **Option A — just open the file**
 
 ```bash
-open codebase_course/index.html         # paper theme
-open codebase_course/v2/index.html      # blackboard theme
+open codebase_course/course/index.html         # paper theme
+open codebase_course/course/v2/index.html      # blackboard theme
 ```
 
 **Option B — serve it (recommended; fonts/route handling behave best)**
 
 ```bash
-cd codebase_course
+cd codebase_course/course
 python3 -m http.server 8000
 # paper:      http://localhost:8000
 # blackboard: http://localhost:8000/v2/
@@ -62,16 +67,18 @@ python3 -m http.server 8000
 
 ```
 codebase_course/
-├── index.html        # paper theme — shell
-├── css/styles.css    # "Study Hall" design system (light)
-├── v2/
-│   ├── index.html    # blackboard theme — shell (reuses ../js)
-│   └── css/board.css # "Blackboard" design system (dark)
-└── js/
-    ├── content.js    # all course content + quizzes (the curriculum) — shared
-    └── app.js        # router, gamification engine, quiz logic, confetti — shared
+├── vercel.json           # hosting config: / → /course redirect + routing
+└── course/               # the site Vercel serves under /course
+    ├── index.html        # paper theme — shell
+    ├── css/styles.css    # "Study Hall" design system (light)
+    ├── v2/
+    │   ├── index.html    # blackboard theme — shell (reuses ../js)
+    │   └── css/board.css # "Blackboard" design system (dark)
+    └── js/
+        ├── content.js    # all course content + quizzes (the curriculum) — shared
+        └── app.js        # router, gamification engine, quiz logic, confetti — shared
 ```
 
-To tweak or extend the course, edit `js/content.js` — it's plain data
+To tweak or extend the course, edit `course/js/content.js` — it's plain data
 (modules → lessons → content blocks → quiz). The renderer in `app.js` turns
 those blocks into the page.

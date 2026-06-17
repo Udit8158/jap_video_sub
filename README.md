@@ -8,10 +8,12 @@ This repo is a small monorepo with two pieces:
 
 ```
 subly/
-├── cli/        ← the engine: a Python CLI that does the actual work
-│               (ffmpeg → mlx-whisper transcribe → OpenAI translate)
-└── desktop/    ← a Mac desktop app (Electron + React) that drives the CLI
-                  and shows a live chunk-by-chunk timeline
+├── cli/             ← the engine: a Python CLI that does the actual work
+│                    (ffmpeg → mlx-whisper transcribe → OpenAI translate)
+├── desktop/         ← a Mac desktop app (Electron + React) that drives the CLI
+│                    and shows a live chunk-by-chunk timeline
+└── codebase_course/ ← an interactive course that teaches this codebase
+                       (hosted on Vercel — see "Live site" below)
 ```
 
 The **CLI is the product**; the desktop app is just a friendly front-end that
@@ -20,6 +22,19 @@ spawns it. They talk over exactly one seam: the CLI emits one JSON event per lin
 [`cli/subly/events.py`](cli/subly/events.py), mirrored in
 [`desktop/src/eventsource/types.ts`](desktop/src/eventsource/types.ts) — keep the
 two in sync.
+
+---
+
+## Live site
+
+- **https://sublyapp.vercel.app** — project home. For now it **redirects to the
+  course**; a proper landing page will live here later.
+- **https://sublyapp.vercel.app/course** — the interactive codebase course
+  (the `codebase_course/` folder, hosted on Vercel).
+
+Hosting notes: the Vercel project is **`subly`**, with its root directory set to
+`codebase_course/`. Every push to `main` auto-deploys. The `/ → /course` redirect
+and routing are defined in [`codebase_course/vercel.json`](codebase_course/vercel.json).
 
 ---
 
